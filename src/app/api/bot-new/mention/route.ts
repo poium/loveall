@@ -299,31 +299,39 @@ async function postReplyToFarcaster(castHash: string, replyText: string) {
 }
 
 // Get user's verified address from Farcaster data
-function getUserVerifiedAddress(castData: any): string | null {
+function getUserVerifiedAddresses(castData: any): string[] {
     try {
-        // Try to get verified address from the cast author
+        const addresses: string[] = [];
+        
+        // Get all verified addresses from the cast author
         const verifiedAddresses = castData.author?.verified_addresses?.eth_addresses;
         if (verifiedAddresses && verifiedAddresses.length > 0) {
-            return verifiedAddresses[0];
+            addresses.push(...verifiedAddresses);
         }
         
-        // Fallback to custody address if no verified address
+        // Add custody address as fallback if no verified addresses
         const custodyAddress = castData.author?.custody_address;
-        if (custodyAddress) {
-            return custodyAddress;
+        if (custodyAddress && !addresses.includes(custodyAddress)) {
+            addresses.push(custodyAddress);
         }
         
-        return null;
+        return addresses;
     } catch (error) {
-        console.error('Error getting user verified address:', error);
-        return null;
+        console.error('Error getting user addresses:', error);
+        return [];
     }
 }
 
-// Check user's USDC balance and contract allowance
-async function checkUserBalance(userAddress: string): Promise<{ hasBalance: boolean; balance: string; error?: string }> {
+// Legacy function for backward compatibility
+function getUserVerifiedAddress(castData: any): string | null {
+    const addresses = getUserVerifiedAddresses(castData);
+    return addresses.length > 0 ? addresses[0] : null;
+}
+
+// Check user's USDC balance and contract allowance for a single address
+async function checkSingleAddressBalance(userAddress: string): Promise<{ hasBalance: boolean; balance: string; error?: string }> {
     try {
-        console.log('Checking balance for user:', userAddress);
+        console.log('Checking balance for address:', userAddress);
         
         // Check USDC balance
         const usdcBalance = await usdcContract.balanceOf(userAddress);
@@ -345,6 +353,55 @@ async function checkUserBalance(userAddress: string): Promise<{ hasBalance: bool
         return {
             hasBalance: false,
             balance: '0',
+            error: error instanceof Error ? error.message : 'Unknown error'
+        };
+    }
+}
+
+// Check all user addresses and find the best one to use
+async function checkUserBalance(userAddresses: string[]): Promise<{ 
+    hasBalance: boolean; 
+    balance: string; 
+    bestAddress: string | null;
+    allAddresses: Array<{address: string, balance: string, hasBalance: boolean}>;
+    error?: string 
+}> {
+    try {
+        console.log('Checking balance for all user addresses:', userAddresses);
+        
+        const addressResults = [];
+        let bestAddress: string | null = null;
+        let bestBalance = '0';
+        
+        // Check each address
+        for (const address of userAddresses) {
+            const result = await checkSingleAddressBalance(address);
+            addressResults.push({
+                address,
+                balance: result.balance,
+                hasBalance: result.hasBalance
+            });
+            
+            // Track the best address (first one with sufficient balance)
+            if (result.hasBalance && !bestAddress) {
+                bestAddress = address;
+                bestBalance = result.balance;
+            }
+        }
+        
+        return {
+            hasBalance: bestAddress !== null,
+            balance: bestBalance,
+            bestAddress,
+            allAddresses: addressResults
+        };
+    } catch (error) {
+        console.error('Error checking user balances:', error);
+        return {
+            hasBalance: false,
+            balance: '0',
+            bestAddress: null,
+            allAddresses: [],
             error: error instanceof Error ? error.message : 'Unknown error'
         };
     }
@@ -447,11 +504,11 @@ export async function POST(request: NextRequest) {
         const isReplyToBotCast = isReplyToBot(castData);
 
         if (isDirectMention || isReplyToBotCast) {
-            // Get user's verified address
-            const userAddress = getUserVerifiedAddress(castData);
-            console.log('User address:', userAddress);
+            // Get user's verified addresses
+            const userAddresses = getUserVerifiedAddresses(castData);
+            console.log('User addresses:', userAddresses);
 
-            if (!userAddress) {
+            if (userAddresses.length === 0) {
                 console.log('No verified address found for user');
                 return NextResponse.json({
                     status: 'error',
@@ -463,12 +520,22 @@ export async function POST(request: NextRequest) {
 
             // Check user's balance (only for direct mentions, not replies)
             if (isDirectMention) {
-                const balanceCheck = await checkUserBalance(userAddress);
+                const balanceCheck = await checkUserBalance(userAddresses);
                 console.log('Balance check result:', balanceCheck);
 
                 if (!balanceCheck.hasBalance) {
-                    console.log('User has insufficient balance');
-                    const insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your wallet to participate. You currently have ${balanceCheck.balance} USDC. Please top up wallet ${userAddress} and try again! 💫`;
+                    console.log('User has insufficient balance in all wallets');
+                    
+                    // Create a message showing the first wallet that needs funding (to keep message concise)
+                    const firstWallet = balanceCheck.allAddresses[0];
+                    const walletCount = balanceCheck.allAddresses.length;
+                    
+                    let insufficientBalanceResponse;
+                    if (walletCount === 1) {
+                        insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your wallet to participate. You currently have ${firstWallet.balance} USDC in wallet ${firstWallet.address}. Please top up this wallet and try again! 💫`;
+                    } else {
+                        insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your wallet to participate. You have ${walletCount} wallets connected, but none have sufficient balance. Please top up any of your connected wallets and try again! 💫`;
+                    }
                     
                     try {
                         const replyResult = await postReplyToFarcaster(castData.hash, insufficientBalanceResponse);
@@ -479,7 +546,7 @@ export async function POST(request: NextRequest) {
                             message: 'User has insufficient balance',
                             timestamp: new Date().toISOString(),
                             castText: castData.text,
-                            userAddress: userAddress,
+                            userAddresses: userAddresses,
                             balance: balanceCheck.balance,
                             replyPosted: true
                         });
@@ -488,8 +555,8 @@ export async function POST(request: NextRequest) {
                     }
                 }
 
-                // Record participation in smart contract
-                const participationResult = await recordParticipation(userAddress, castData.hash);
+                // Record participation in smart contract using the best address
+                const participationResult = await recordParticipation(balanceCheck.bestAddress || userAddresses[0], castData.hash);
                 console.log('Participation recording result:', participationResult);
             }
 
@@ -544,7 +611,7 @@ export async function POST(request: NextRequest) {
                     threadContext: threadContext.substring(0, 100) + '...',
                     replyPosted: true,
                     replyHash: replyHash,
-                    userAddress: userAddress,
+                    userAddresses: userAddresses,
                     balanceChecked: isDirectMention
                 });
             } catch (replyError: any) {
@@ -588,3 +655,4 @@ export async function POST(request: NextRequest) {
         }, { status: 500 });
     }
 }
+
