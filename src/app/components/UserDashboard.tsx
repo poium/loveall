@@ -14,13 +14,37 @@ interface UserData {
 
 // Contract addresses
 const CONTRACT_ADDRESS = '0xE05efF71D71850c0FEc89660DC6588787312e453';
-const USDC_ADDRESS = '0x833589fCD6Edb6E08f4c7C32D4f71b54bdA02913';
+const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
 // USDC ABI for approve function
 const USDC_ABI = [
-  'function approve(address spender, uint256 amount) external returns (bool)',
-  'function balanceOf(address account) external view returns (uint256)',
-  'function allowance(address owner, address spender) external view returns (uint256)'
+  {
+    name: 'approve',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'spender', type: 'address' },
+      { name: 'amount', type: 'uint256' }
+    ],
+    outputs: [{ name: '', type: 'bool' }]
+  },
+  {
+    name: 'balanceOf',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'account', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }]
+  },
+  {
+    name: 'allowance',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [
+      { name: 'owner', type: 'address' },
+      { name: 'spender', type: 'address' }
+    ],
+    outputs: [{ name: '', type: 'uint256' }]
+  }
 ] as const;
 
 export default function UserDashboard() {

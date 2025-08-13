@@ -534,9 +534,9 @@ export async function POST(request: NextRequest) {
                 // Handle both test and real responses
                 const replyHash = 'hash' in replyResult ? replyResult.hash : 'unknown';
 
-                return NextResponse.json({
-                    status: 'processed',
-                    response,
+            return NextResponse.json({ 
+                status: 'processed', 
+                response,
                     interactionType,
                     message: 'Interaction detected and reply posted to Farcaster',
                     timestamp: new Date().toISOString(),
@@ -573,8 +573,8 @@ export async function POST(request: NextRequest) {
             }
         } else {
             console.log('No interaction detected in:', castData.text);
-            return NextResponse.json({
-                status: 'ignored',
+            return NextResponse.json({ 
+                status: 'ignored', 
                 reason: 'no_interaction',
                 timestamp: new Date().toISOString(),
                 castText: castData.text

@@ -3,7 +3,7 @@ import { ethers } from 'ethers';
 
 // Smart Contract Configuration
 const CONTRACT_ADDRESS = '0xE05efF71D71850c0FEc89660DC6588787312e453';
-const USDC_ADDRESS = '0x833589fCD6Edb6E08f4c7C32D4f71b54bdA02913';
+const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
 // Contract ABI for the functions we need
 const CONTRACT_ABI = [
