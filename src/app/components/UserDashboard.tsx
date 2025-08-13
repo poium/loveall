@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { parseUnits } from 'viem';
 
 interface UserData {
   balance: string;
@@ -11,16 +12,32 @@ interface UserData {
   canParticipate: boolean;
 }
 
+// Contract addresses
+const CONTRACT_ADDRESS = '0xE05efF71D71850c0FEc89660DC6588787312e453';
+const USDC_ADDRESS = '0x833589fCD6Edb6E08f4c7C32D4f71b54bdA02913';
+
+// USDC ABI for approve function
+const USDC_ABI = [
+  'function approve(address spender, uint256 amount) external returns (bool)',
+  'function balanceOf(address account) external view returns (uint256)',
+  'function allowance(address owner, address spender) external view returns (uint256)'
+] as const;
+
 export default function UserDashboard() {
   const { address, isConnected } = useAccount();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showFundSection, setShowFundSection] = useState(false);
+
+  // Contract write hooks
+  const { writeContract, data: hash, isPending } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
   useEffect(() => {
     if (isConnected && address) {
       fetchUserData();
     }
-  }, [isConnected, address]);
+  }, [isConnected, address, isSuccess]);
 
   const fetchUserData = async () => {
     if (!address) return;
@@ -43,6 +60,20 @@ export default function UserDashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const approveContract = () => {
+    if (!address) return;
+    
+    // Approve 100 USDC (enough for many casts)
+    const amount = parseUnits('100', 6); // USDC has 6 decimals
+    
+    writeContract({
+      address: USDC_ADDRESS as `0x${string}`,
+      abi: USDC_ABI,
+      functionName: 'approve',
+      args: [CONTRACT_ADDRESS as `0x${string}`, amount],
+    });
   };
 
   if (!isConnected) {
@@ -99,6 +130,71 @@ export default function UserDashboard() {
             </div>
           </div>
 
+          {/* Fund Wallet Section */}
+          {!userData.canParticipate && (
+            <div className="mt-6 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-6 border border-yellow-200">
+              <h4 className="font-semibold text-gray-900 mb-4">💰 Fund Your Wallet</h4>
+              <div className="space-y-4">
+                <div className="bg-white rounded-lg p-4">
+                  <h5 className="font-medium text-gray-900 mb-2">Step 1: Add USDC to your wallet</h5>
+                  <p className="text-gray-600 text-sm mb-3">
+                    You need at least 0.01 USDC to participate. You can get USDC from:
+                  </p>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                      <span className="text-sm text-gray-700">Coinbase, Binance, or other exchanges</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                      <span className="text-sm text-gray-700">Bridge from Ethereum using Base Bridge</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                      <span className="text-sm text-gray-700">Buy directly on Base network</span>
+                    </div>
+                  </div>
+                  <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                    <p className="text-xs text-gray-600">
+                      <strong>USDC Contract:</strong> {USDC_ADDRESS}
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      <strong>Network:</strong> Base Mainnet
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg p-4">
+                  <h5 className="font-medium text-gray-900 mb-2">Step 2: Approve Contract</h5>
+                  <p className="text-gray-600 text-sm mb-3">
+                    Allow the Loveall contract to spend your USDC (0.01 USDC per cast):
+                  </p>
+                  <button
+                    onClick={approveContract}
+                    disabled={isPending || isConfirming}
+                    className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white font-medium py-3 px-4 rounded-lg hover:from-pink-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    {isPending ? 'Approving...' : isConfirming ? 'Confirming...' : 'Approve 100 USDC'}
+                  </button>
+                  {isSuccess && (
+                    <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-green-800 text-sm font-medium">✅ Approval successful!</p>
+                      <p className="text-green-700 text-xs">You can now participate in the Loveall prize pool.</p>
+                    </div>
+                  )}
+                  <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                    <p className="text-xs text-gray-600">
+                      <strong>Contract Address:</strong> {CONTRACT_ADDRESS}
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      <strong>Cost per cast:</strong> 0.01 USDC
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="mt-6 pt-6 border-t border-gray-200">
             <div className="flex flex-col sm:flex-row gap-4">
@@ -111,16 +207,8 @@ export default function UserDashboard() {
               ) : (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                   <p className="text-yellow-800 font-medium">
-                    ⚠️ You need at least 0.01 USDC and contract allowance to participate.
+                    ⚠️ Follow the steps above to add USDC and approve the contract.
                   </p>
-                  <div className="mt-3 space-y-2">
-                    <p className="text-yellow-700 text-sm">
-                      • Add USDC to your wallet on Base network
-                    </p>
-                    <p className="text-yellow-700 text-sm">
-                      • Approve the contract to spend your USDC
-                    </p>
-                  </div>
                 </div>
               )}
             </div>
