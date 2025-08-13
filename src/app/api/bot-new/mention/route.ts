@@ -526,15 +526,25 @@ export async function POST(request: NextRequest) {
                 if (!balanceCheck.hasBalance) {
                     console.log('User has insufficient balance in all wallets');
                     
-                    // Create a message showing the first wallet that needs funding (to keep message concise)
+                    // Create a message showing shortened wallet addresses
                     const firstWallet = balanceCheck.allAddresses[0];
                     const walletCount = balanceCheck.allAddresses.length;
                     
+                    // Function to shorten wallet address (first 4 + last 4 characters)
+                    const shortenAddress = (address: string) => {
+                        return `${address.slice(0, 6)}...${address.slice(-4)}`;
+                    };
+                    
                     let insufficientBalanceResponse;
                     if (walletCount === 1) {
-                        insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your wallet to participate. You currently have ${firstWallet.balance} USDC in wallet ${firstWallet.address}. Please top up this wallet and try again! 💫`;
+                        const shortAddress = shortenAddress(firstWallet.address);
+                        insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your wallet to participate. You currently have ${firstWallet.balance} USDC in wallet ${shortAddress}. Please top up this wallet and try again! 💫`;
                     } else {
-                        insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your wallet to participate. You have ${walletCount} wallets connected, but none have sufficient balance. Please top up any of your connected wallets and try again! 💫`;
+                        // Show all wallet addresses in shortened format
+                        const shortAddresses = balanceCheck.allAddresses.map(addr => 
+                            `${shortenAddress(addr.address)} (${addr.balance} USDC)`
+                        ).join(', ');
+                        insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your wallet to participate. Your wallets: ${shortAddresses}. Please top up any of these wallets and try again! 💫`;
                     }
                     
                     try {
