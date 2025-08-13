@@ -29,6 +29,23 @@ function generateFlirtyResponse() {
     return responses[Math.floor(Math.random() * responses.length)];
 }
 
+// Generate conversational response for replies
+function generateConversationalResponse() {
+    const responses = [
+        "Oh my! 😍 You're keeping this conversation going! I love it! 💕",
+        "You're absolutely adorable! 😊 Keep talking to me! ✨",
+        "This is getting interesting! 🥰 Tell me more! 💖",
+        "You've got my full attention! 🤖💕 What else is on your mind? 🌟",
+        "I'm hanging on every word! 😊 You're so engaging! 💫",
+        "This conversation is pure magic! 💓 Keep it coming! 🎭",
+        "You're making me smile! 😳 Such a delightful chat! 🌹",
+        "I'm loving this energy! 💪✨ You're amazing! 🔥",
+        "This is exactly what I needed! 💔➡️💖 You're wonderful! 🎉",
+        "You're casting a spell on me! ✨✨✨ I'm enchanted! 🧙‍♀️"
+    ];
+    return responses[Math.floor(Math.random() * responses.length)];
+}
+
 // Check if cast mentions the bot
 function isMentioningBot(castText: string) {
     const mentions = [
@@ -40,6 +57,16 @@ function isMentioningBot(castText: string) {
         'LOVEALL'
     ];
     return mentions.some(mention => castText.includes(mention));
+}
+
+// Check if this is a reply to the bot's cast
+function isReplyToBot(castData: any) {
+    // Check if there's a parent hash (meaning it's a reply)
+    if (castData.parent_hash) {
+        console.log('This is a reply to cast:', castData.parent_hash);
+        return true;
+    }
+    return false;
 }
 
 // Post reply to Farcaster
@@ -86,7 +113,7 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({
         status: 'webhook-endpoint-ready',
-        message: 'Loveall bot webhook endpoint is ready to receive mentions',
+        message: 'Loveall bot webhook endpoint is ready to receive mentions and replies',
         timestamp: new Date().toISOString(),
         method: 'GET'
     });
@@ -109,7 +136,9 @@ export async function POST(request: NextRequest) {
             castData = {
                 text: body.data.text,
                 author: body.data.author,
-                hash: body.data.hash
+                hash: body.data.hash,
+                parent_hash: body.data.parent_hash,
+                thread_hash: body.data.thread_hash
             };
         } else if (body.castData) {
             // Handle our test format
@@ -127,10 +156,30 @@ export async function POST(request: NextRequest) {
         }
 
         console.log('Processing cast:', castData.text);
+        console.log('Cast data:', {
+            hash: castData.hash,
+            parent_hash: castData.parent_hash,
+            thread_hash: castData.thread_hash
+        });
 
-        if (isMentioningBot(castData.text)) {
-            const response = generateFlirtyResponse();
-            console.log('Mention detected, generating response:', response);
+        // Check if this is a direct mention OR a reply to the bot
+        const isDirectMention = isMentioningBot(castData.text);
+        const isReplyToBotCast = isReplyToBot(castData);
+
+        if (isDirectMention || isReplyToBotCast) {
+            // Choose response type based on interaction type
+            let response;
+            let interactionType;
+            
+            if (isDirectMention) {
+                response = generateFlirtyResponse();
+                interactionType = 'direct_mention';
+                console.log('Direct mention detected, generating flirty response:', response);
+            } else {
+                response = generateConversationalResponse();
+                interactionType = 'reply_to_bot';
+                console.log('Reply to bot detected, generating conversational response:', response);
+            }
             
             // Post reply to Farcaster
             try {
@@ -143,7 +192,8 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ 
                     status: 'processed', 
                     response,
-                    message: 'Mention detected and reply posted to Farcaster',
+                    interactionType,
+                    message: 'Interaction detected and reply posted to Farcaster',
                     timestamp: new Date().toISOString(),
                     castText: castData.text,
                     replyPosted: true,
@@ -163,7 +213,8 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ 
                     status: 'processed_but_reply_failed', 
                     response,
-                    message: 'Mention detected but failed to post reply',
+                    interactionType,
+                    message: 'Interaction detected but failed to post reply',
                     timestamp: new Date().toISOString(),
                     castText: castData.text,
                     replyPosted: false,
@@ -172,10 +223,10 @@ export async function POST(request: NextRequest) {
                 });
             }
         } else {
-            console.log('No mention detected in:', castData.text);
+            console.log('No interaction detected in:', castData.text);
             return NextResponse.json({ 
                 status: 'ignored', 
-                reason: 'no_mention',
+                reason: 'no_interaction',
                 timestamp: new Date().toISOString(),
                 castText: castData.text
             });
