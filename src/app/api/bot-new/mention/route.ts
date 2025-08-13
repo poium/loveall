@@ -468,7 +468,7 @@ export async function POST(request: NextRequest) {
 
                 if (!balanceCheck.hasBalance) {
                     console.log('User has insufficient balance');
-                    const insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your wallet to participate. You currently have ${balanceCheck.balance} USDC. You can top up your wallet and try again! 💫`;
+                    const insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your wallet to participate. You currently have ${balanceCheck.balance} USDC. Please top up wallet ${userAddress} and try again! 💫`;
                     
                     try {
                         const replyResult = await postReplyToFarcaster(castData.hash, insufficientBalanceResponse);
