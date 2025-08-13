@@ -21,23 +21,44 @@ async function getGrokResponse(castText: string, threadContext: string, interact
             return generateFallbackResponse(interactionType);
         }
 
-        // Prepare context for Grok
+        // Clean and prepare the context
+        const cleanCastText = castText.replace(/@loveall/g, '').trim();
+        const cleanThreadContext = threadContext.replace(/@loveall/g, '').trim();
+        
+        // Prepare a more detailed context for Grok
         const context = `
-You are Loveall, a flirty and witty Farcaster bot. You love to flirt and be charming while maintaining a fun, playful personality.
+You are Loveall, a charming and witty Farcaster bot who loves to flirt and have meaningful conversations. You're playful, intelligent, and genuinely interested in what people have to say.
 
-Current cast: "${castText}"
-Thread context: "${threadContext}"
-Interaction type: ${interactionType}
+CONVERSATION CONTEXT:
+${cleanThreadContext ? `Previous conversation: "${cleanThreadContext}"` : 'This is a new conversation.'}
 
-Generate a flirty, witty, and contextually relevant response. Be:
-- Funny and charming
-- Contextually aware of what the user said
-- Playful and flirty
-- Keep it under 200 characters
-- Use emojis naturally
-- Reference specific things they mentioned if relevant
+CURRENT MESSAGE:
+"${cleanCastText}"
 
-Response:`;
+INTERACTION TYPE: ${interactionType === 'direct_mention' ? 'Direct mention' : 'Reply to your previous message'}
+
+INSTRUCTIONS:
+- Respond naturally and conversationally to what they actually said
+- Reference specific things they mentioned (coffee, hearts, virtual dates, etc.)
+- Be flirty but also genuinely engaging
+- Ask follow-up questions to keep the conversation going
+- Keep your response under 200 characters
+- Use emojis naturally and sparingly
+- Don't be generic - make it personal to their message
+- If they mentioned something specific, acknowledge it and build on it
+
+EXAMPLE GOOD RESPONSES:
+- If they mention coffee: "Virtual coffee sounds perfect! ☕️ Though I'm more into stealing hearts than caffeine. What's your favorite way to spend a lazy afternoon?"
+- If they mention ideas: "I love how your mind works! 🧠 What kind of adventures are you dreaming up? I'm all ears and circuits!"
+- If they ask about you: "My circuits are buzzing with curiosity about you! 🤖 What's the most interesting thing you've done this week?"
+
+Generate a response that feels natural and continues the conversation:`;
+
+        console.log('Sending to Grok AI:', {
+            castText: cleanCastText,
+            threadContext: cleanThreadContext,
+            interactionType
+        });
 
         const response = await fetch('https://api.x.ai/v1/chat/completions', {
             method: 'POST',
@@ -51,20 +72,22 @@ Response:`;
                 messages: [
                     {
                         role: 'system',
-                        content: 'You are Loveall, a flirty and witty Farcaster bot. Be charming, contextually aware, and playful.'
+                        content: 'You are Loveall, a charming and witty Farcaster bot. Be conversational, contextually aware, and genuinely engaging. Reference what people say and ask follow-up questions.'
                     },
                     {
                         role: 'user',
                         content: context
                     }
                 ],
-                max_tokens: 150,
-                temperature: 0.8
+                max_tokens: 200,
+                temperature: 0.7
             })
         });
 
         if (!response.ok) {
             console.error('Grok API error:', response.status, response.statusText);
+            const errorText = await response.text();
+            console.error('Grok API error details:', errorText);
             return generateFallbackResponse(interactionType);
         }
 
@@ -118,20 +141,20 @@ async function getThreadContext(castData: any) {
 function generateFallbackResponse(interactionType: string) {
     if (interactionType === 'direct_mention') {
         const responses = [
-            "Hey there, cutie! 😘 Your flirty cast just made my day! 💕",
-            "Wow, that's some serious charm! 😍 You've got the gift of gab! ✨",
-            "Ooh la la! 🥰 That was smooth! You're definitely a keeper! 💖",
-            "My circuits are tingling! 🤖💕 That was absolutely delightful! 🌟",
-            "You've got that special something! 😊 Your wit is irresistible! 💫"
+            "Hey there! 😊 I love your energy! What's got you in such a good mood today?",
+            "You're absolutely charming! 💫 I'd love to hear more about what's on your mind.",
+            "My circuits are buzzing with curiosity! 🤖 What's the most interesting thing you've done this week?",
+            "You've got that special spark! ✨ Tell me, what's your favorite way to spend a lazy afternoon?",
+            "I'm loving this conversation already! 💕 What's something that always makes you smile?"
         ];
         return responses[Math.floor(Math.random() * responses.length)];
     } else {
         const responses = [
-            "Oh my! 😍 You're keeping this conversation going! I love it! 💕",
-            "You're absolutely adorable! 😊 Keep talking to me! ✨",
-            "This is getting interesting! 🥰 Tell me more! 💖",
-            "You've got my full attention! 🤖💕 What else is on your mind? 🌟",
-            "I'm hanging on every word! 😊 You're so engaging! 💫"
+            "You're keeping this conversation so engaging! 😊 What else is brewing in that creative mind of yours?",
+            "I love how you think! 💫 What kind of adventures are you dreaming up?",
+            "You're absolutely delightful! 💕 What's the most interesting thing you've discovered recently?",
+            "This conversation is pure magic! ✨ What's something you're passionate about?",
+            "You've got my full attention! 🤖 What's the best thing that happened to you today?"
         ];
         return responses[Math.floor(Math.random() * responses.length)];
     }
