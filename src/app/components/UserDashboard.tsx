@@ -63,17 +63,31 @@ export default function UserDashboard() {
   };
 
   const approveContract = () => {
-    if (!address) return;
+    if (!address) {
+      console.log('No address found');
+      return;
+    }
+    
+    console.log('Approving contract...', {
+      address,
+      contractAddress: CONTRACT_ADDRESS,
+      usdcAddress: USDC_ADDRESS
+    });
     
     // Approve 100 USDC (enough for many casts)
     const amount = parseUnits('100', 6); // USDC has 6 decimals
     
-    writeContract({
-      address: USDC_ADDRESS as `0x${string}`,
-      abi: USDC_ABI,
-      functionName: 'approve',
-      args: [CONTRACT_ADDRESS as `0x${string}`, amount],
-    });
+    try {
+      writeContract({
+        address: USDC_ADDRESS as `0x${string}`,
+        abi: USDC_ABI,
+        functionName: 'approve',
+        args: [CONTRACT_ADDRESS as `0x${string}`, amount],
+      });
+      console.log('Write contract called successfully');
+    } catch (error) {
+      console.error('Error calling writeContract:', error);
+    }
   };
 
   if (!isConnected) {
