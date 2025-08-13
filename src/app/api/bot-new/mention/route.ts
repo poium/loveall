@@ -1,4 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { NeynarAPIClient, Configuration } from '@neynar/nodejs-sdk';
+
+// Initialize Neynar client
+const config = new Configuration({
+    apiKey: process.env.NEYNAR_API_KEY,
+    baseOptions: {
+        headers: {
+            "x-neynar-experimental": true,
+        },
+    },
+});
+const neynar = new NeynarAPIClient(config);
 
 // Generate flirty response
 function generateFlirtyResponse() {
@@ -28,6 +40,28 @@ function isMentioningBot(castText: string) {
         'LOVEALL'
     ];
     return mentions.some(mention => castText.includes(mention));
+}
+
+// Post reply to Farcaster
+async function postReplyToFarcaster(castHash: string, replyText: string) {
+    try {
+        console.log('Posting reply to cast:', castHash);
+        console.log('Reply text:', replyText);
+        
+        const reply = await neynar.publishCast(
+            process.env.NEYNAR_SIGNER_UUID!,
+            replyText,
+            {
+                replyTo: castHash
+            }
+        );
+        
+        console.log('Reply posted successfully:', reply);
+        return reply;
+    } catch (error) {
+        console.error('Error posting reply:', error);
+        throw error;
+    }
 }
 
 // GET handler for webhook verification and debugging
@@ -84,13 +118,32 @@ export async function POST(request: NextRequest) {
             const response = generateFlirtyResponse();
             console.log('Mention detected, generating response:', response);
             
-            return NextResponse.json({ 
-                status: 'processed', 
-                response,
-                message: 'Mention detected and processed',
-                timestamp: new Date().toISOString(),
-                castText: castData.text
-            });
+            // Post reply to Farcaster
+            try {
+                const replyResult = await postReplyToFarcaster(castData.hash, response);
+                console.log('Reply posted successfully:', replyResult);
+                
+                return NextResponse.json({ 
+                    status: 'processed', 
+                    response,
+                    message: 'Mention detected and reply posted to Farcaster',
+                    timestamp: new Date().toISOString(),
+                    castText: castData.text,
+                    replyPosted: true,
+                    replyHash: replyResult?.hash
+                });
+            } catch (replyError) {
+                console.error('Failed to post reply:', replyError);
+                return NextResponse.json({ 
+                    status: 'processed_but_reply_failed', 
+                    response,
+                    message: 'Mention detected but failed to post reply',
+                    timestamp: new Date().toISOString(),
+                    castText: castData.text,
+                    replyPosted: false,
+                    error: replyError instanceof Error ? replyError.message : 'Unknown error'
+                });
+            }
         } else {
             console.log('No mention detected in:', castData.text);
             return NextResponse.json({ 
