@@ -24,7 +24,7 @@ export default function Home() {
   const fetchPrizePoolData = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/prize-pool-new');
+      const response = await fetch('/api/prize-data');
       if (response.ok) {
         const data = await response.json();
         setPrizePoolData(data);
