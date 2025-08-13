@@ -230,41 +230,41 @@ export default function AdminDashboard() {
 
   if (!isConnected) {
     return (
-      <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
-        <h3 className="text-2xl font-bold text-gray-900 mb-4">Admin Dashboard</h3>
-        <p className="text-gray-600">Please connect your wallet to access admin functions.</p>
+      <div className="bg-gray-800 rounded-2xl shadow-xl p-8 mb-8 border border-purple-500/30">
+        <h3 className="text-2xl font-bold text-white mb-4">Admin Dashboard</h3>
+        <p className="text-gray-300">Please connect your wallet to access admin functions.</p>
       </div>
     );
   }
 
   if (!adminData?.isOwner) {
     return (
-      <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
-        <h3 className="text-2xl font-bold text-gray-900 mb-4">Admin Dashboard</h3>
-        <p className="text-gray-600">Only the contract owner can access admin functions.</p>
+      <div className="bg-gray-800 rounded-2xl shadow-xl p-8 mb-8 border border-purple-500/30">
+        <h3 className="text-2xl font-bold text-white mb-4">Admin Dashboard</h3>
+        <p className="text-gray-300">Only the contract owner can access admin functions.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+    <div className="bg-gray-800 rounded-2xl shadow-xl p-8 mb-8 border border-purple-500/30">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-2xl font-bold text-gray-900">Admin Dashboard</h3>
-        <div className="text-sm text-gray-500">
+        <h3 className="text-2xl font-bold text-white">Admin Dashboard</h3>
+        <div className="text-sm text-gray-400">
           {address?.slice(0, 6)}...{address?.slice(-4)}
         </div>
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex space-x-1 mb-6 bg-gray-100 rounded-lg p-1">
+      <div className="flex space-x-1 mb-6 bg-gray-700 rounded-lg p-1">
         {['overview', 'actions'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               activeTab === tab
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-purple-600 text-white shadow-sm'
+                : 'text-gray-300 hover:text-white'
             }`}
           >
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -274,48 +274,48 @@ export default function AdminDashboard() {
 
       {loading ? (
         <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Loading admin data...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-400 mx-auto"></div>
+          <p className="mt-2 text-gray-300">Loading admin data...</p>
         </div>
       ) : (
         <>
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl p-6">
-                <h4 className="font-semibold text-gray-900 mb-2">Current Week</h4>
-                <p className="text-3xl font-bold text-pink-600">{adminData?.currentWeek || 0}</p>
+              <div className="bg-gradient-to-r from-pink-900/50 to-purple-900/50 rounded-xl p-6 border border-pink-500/30">
+                <h4 className="font-semibold text-white mb-2">Current Week</h4>
+                <p className="text-3xl font-bold text-pink-400">{adminData?.currentWeek || 0}</p>
               </div>
 
-              <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-xl p-6">
-                <h4 className="font-semibold text-gray-900 mb-2">Current Prize Pool</h4>
-                <p className="text-3xl font-bold text-blue-600">
+              <div className="bg-gradient-to-r from-blue-900/50 to-green-900/50 rounded-xl p-6 border border-blue-500/30">
+                <h4 className="font-semibold text-white mb-2">Current Prize Pool</h4>
+                <p className="text-3xl font-bold text-blue-400">
                   ${parseFloat(adminData?.currentPrizePool || '0').toFixed(2)}
                 </p>
               </div>
 
-              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-6">
-                <h4 className="font-semibold text-gray-900 mb-2">Total Participants</h4>
-                <p className="text-3xl font-bold text-yellow-600">{adminData?.totalParticipants || 0}</p>
+              <div className="bg-gradient-to-r from-yellow-900/50 to-orange-900/50 rounded-xl p-6 border border-yellow-500/30">
+                <h4 className="font-semibold text-white mb-2">Total Participants</h4>
+                <p className="text-3xl font-bold text-yellow-400">{adminData?.totalParticipants || 0}</p>
               </div>
 
-              <div className="bg-gradient-to-r from-green-50 to-teal-50 rounded-xl p-6">
-                <h4 className="font-semibold text-gray-900 mb-2">Rollover Amount</h4>
-                <p className="text-3xl font-bold text-green-600">
+              <div className="bg-gradient-to-r from-green-900/50 to-teal-900/50 rounded-xl p-6 border border-green-500/30">
+                <h4 className="font-semibold text-white mb-2">Rollover Amount</h4>
+                <p className="text-3xl font-bold text-green-400">
                   ${parseFloat(adminData?.rolloverAmount || '0').toFixed(2)}
                 </p>
               </div>
 
-              <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-6">
-                <h4 className="font-semibold text-gray-900 mb-2">Total Prize Pool</h4>
-                <p className="text-3xl font-bold text-purple-600">
+              <div className="bg-gradient-to-r from-purple-900/50 to-indigo-900/50 rounded-xl p-6 border border-purple-500/30">
+                <h4 className="font-semibold text-white mb-2">Total Prize Pool</h4>
+                <p className="text-3xl font-bold text-purple-400">
                   ${parseFloat(adminData?.totalPrizePool || '0').toFixed(2)}
                 </p>
               </div>
 
-              <div className="bg-gradient-to-r from-red-50 to-pink-50 rounded-xl p-6">
-                <h4 className="font-semibold text-gray-900 mb-2">Week End Time</h4>
-                <p className="text-lg font-semibold text-red-600">
+              <div className="bg-gradient-to-r from-red-900/50 to-pink-900/50 rounded-xl p-6 border border-red-500/30">
+                <h4 className="font-semibold text-white mb-2">Week End Time</h4>
+                <p className="text-lg font-semibold text-red-400">
                   {adminData?.weekStartTime ? new Date(adminData.weekStartTime * 1000).toLocaleDateString() : 'N/A'}
                 </p>
               </div>
@@ -327,15 +327,15 @@ export default function AdminDashboard() {
           {/* Actions Tab */}
           {activeTab === 'actions' && (
             <div className="space-y-4">
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6">
-                <h4 className="font-semibold text-gray-900 mb-4">Prize Distribution</h4>
+              <div className="bg-gradient-to-r from-green-900/50 to-emerald-900/50 rounded-xl p-6 border border-green-500/30">
+                <h4 className="font-semibold text-white mb-4">Prize Distribution</h4>
                 <div className="space-y-3">
                   <input
                     type="text"
                     placeholder="Winner address (0x...)"
                     value={winnerAddress}
                     onChange={(e) => setWinnerAddress(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-gray-700 text-white placeholder-gray-400"
                   />
                   <div className="flex space-x-3">
                     <button
@@ -356,8 +356,8 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-6">
-                <h4 className="font-semibold text-gray-900 mb-4">Week Management</h4>
+              <div className="bg-gradient-to-r from-blue-900/50 to-cyan-900/50 rounded-xl p-6 border border-blue-500/30">
+                <h4 className="font-semibold text-white mb-4">Week Management</h4>
                 <button
                   onClick={startNewWeek}
                   disabled={isPending}
@@ -373,10 +373,10 @@ export default function AdminDashboard() {
 
       {/* Transaction Status */}
       {(isPending || isConfirming) && (
-        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="mt-6 p-4 bg-blue-900/50 border border-blue-500/30 rounded-lg">
           <div className="flex items-center space-x-3">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-            <p className="text-blue-800">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400"></div>
+            <p className="text-blue-300">
               {isPending ? 'Transaction pending...' : 'Confirming transaction...'}
             </p>
           </div>
@@ -384,23 +384,23 @@ export default function AdminDashboard() {
       )}
 
       {isSuccess && (
-        <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+        <div className="mt-6 p-4 bg-green-900/50 border border-green-500/30 rounded-lg">
           <div className="flex items-center space-x-3">
-            <div className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center">
+            <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
               <span className="text-white text-xs">✓</span>
             </div>
-            <p className="text-green-800">Transaction successful!</p>
+            <p className="text-green-300">Transaction successful!</p>
           </div>
         </div>
       )}
 
       {error && (
-        <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div className="mt-6 p-4 bg-red-900/50 border border-red-500/30 rounded-lg">
           <div className="flex items-center space-x-3">
-            <div className="w-5 h-5 bg-red-600 rounded-full flex items-center justify-center">
+            <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
               <span className="text-white text-xs">✗</span>
             </div>
-            <p className="text-red-800">Transaction failed: {error.message}</p>
+            <p className="text-red-300">Transaction failed: {error.message}</p>
           </div>
         </div>
       )}

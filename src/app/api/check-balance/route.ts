@@ -115,6 +115,26 @@ export async function GET(request: NextRequest) {
         const hasSufficientBalance = userData ? userData.hasSufficientBalance : false;
         const hasParticipatedThisWeek = userData ? userData.hasParticipatedThisWeek : false;
         const participationsCount = userData ? Number(userData.participationsCount) : 0;
+        
+        // Process participations data
+        const participations = userData ? userData.participations.map((participation: any) => ({
+            user: participation.user,
+            castHash: participation.castHash,
+            timestamp: Number(participation.timestamp),
+            weekNumber: Number(participation.weekNumber),
+            usdcAmount: ethers.formatUnits(participation.usdcAmount, 6),
+            isEvaluated: participation.isEvaluated
+        })) : [];
+
+        // Debug logging
+        console.log('User data analysis:', {
+            address,
+            contractBalance,
+            hasSufficientBalance,
+            hasParticipatedThisWeek,
+            participationsCount,
+            canParticipate: hasSufficientBalance && !hasParticipatedThisWeek
+        });
 
         return NextResponse.json({
             address: address,
@@ -122,6 +142,7 @@ export async function GET(request: NextRequest) {
             hasSufficientBalance: hasSufficientBalance,
             hasParticipatedThisWeek: hasParticipatedThisWeek,
             participationsCount: participationsCount,
+            participations: participations,
             canParticipate: hasSufficientBalance && !hasParticipatedThisWeek,
             requiredAmount: '0.01',
             timestamp: new Date().toISOString()

@@ -10,6 +10,17 @@ interface UserData {
   participationCount: number;
   lastParticipation: number;
   canParticipate: boolean;
+  totalSpent: string;
+  hasSufficientBalance: boolean;
+  hasParticipatedThisWeek: boolean;
+  participations: Array<{
+    user: string;
+    castHash: string;
+    timestamp: number;
+    weekNumber: number;
+    usdcAmount: string;
+    isEvaluated: boolean;
+  }>;
 }
 
 // Contract addresses
@@ -152,12 +163,23 @@ export default function UserDashboard() {
       const response = await fetch(`/api/check-balance?address=${address}`);
       if (response.ok) {
         const data = await response.json();
+        console.log('API Response:', data); // Debug log
+        // Calculate total spent from participations
+        const participations = data.participations || [];
+        const totalSpent = participations.reduce((total: number, participation: any) => {
+          return total + parseFloat(participation.usdcAmount || '0');
+        }, 0);
+
         setUserData({
-          balance: data.usdcBalance,
-          allowance: data.contractAllowance,
-          participationCount: 0, // TODO: Add participation tracking
+          balance: data.contractBalance || '0',
+          allowance: '0', // Not needed anymore - using contract balance
+          participationCount: data.participationsCount || 0,
           lastParticipation: 0, // TODO: Add participation tracking
-          canParticipate: data.canParticipate
+          canParticipate: data.canParticipate || false,
+          totalSpent: totalSpent.toFixed(2),
+          hasSufficientBalance: data.hasSufficientBalance || false,
+          hasParticipatedThisWeek: data.hasParticipatedThisWeek || false,
+          participations: participations
         });
       }
     } catch (error) {
@@ -264,49 +286,82 @@ export default function UserDashboard() {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+    <div className="bg-gray-800 rounded-2xl shadow-xl p-8 mb-8 border border-purple-500/30">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-2xl font-bold text-gray-900">Your Dashboard</h3>
-        <div className="text-sm text-gray-500">
+        <h3 className="text-2xl font-bold text-white">Your Dashboard</h3>
+        <div className="text-sm text-gray-400">
           {address?.slice(0, 6)}...{address?.slice(-4)}
         </div>
       </div>
 
       {loading ? (
         <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Loading your data...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-400 mx-auto"></div>
+          <p className="mt-2 text-gray-300">Loading your data...</p>
         </div>
       ) : userData ? (
         <>
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-3 gap-6">
             {/* Balance Section */}
-            <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl p-6">
-              <h4 className="font-semibold text-gray-900 mb-4">USDC Balance</h4>
+            <div className="bg-gradient-to-r from-pink-900/50 to-purple-900/50 rounded-xl p-6 border border-pink-500/30">
+              <h4 className="font-semibold text-white mb-4">Contract Balance</h4>
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Available:</span>
-                  <span className="font-semibold">{parseFloat(userData.balance).toFixed(2)} USDC</span>
+                  <span className="text-gray-300">Available:</span>
+                  <span className="font-semibold text-white">{isNaN(parseFloat(userData.balance || '0')) ? '0.00' : parseFloat(userData.balance || '0').toFixed(2)} USDC</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Contract Allowance:</span>
-                  <span className="font-semibold">{parseFloat(userData.allowance).toFixed(2)} USDC</span>
+                  <span className="text-gray-300">Total Spent:</span>
+                  <span className="font-semibold text-red-400">{parseFloat(userData.totalSpent || '0').toFixed(2)} USDC</span>
                 </div>
               </div>
             </div>
 
             {/* Participation Section */}
-            <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-xl p-6">
-              <h4 className="font-semibold text-gray-900 mb-4">Participation</h4>
+            <div className="bg-gradient-to-r from-blue-900/50 to-green-900/50 rounded-xl p-6 border border-blue-500/30">
+              <h4 className="font-semibold text-white mb-4">Participation Status</h4>
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">This Week:</span>
-                  <span className="font-semibold">{userData.participationCount} casts</span>
+                  <span className="text-gray-300">Status:</span>
+                  <span className={`font-semibold ${userData.canParticipate ? 'text-green-400' : 'text-red-400'}`}>
+                    {userData.canParticipate ? 'Ready to Participate' : 'Cannot Participate'}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Status:</span>
-                  <span className={`font-semibold ${userData.canParticipate ? 'text-green-600' : 'text-red-600'}`}>
-                    {userData.canParticipate ? 'Ready to Participate' : 'Insufficient Balance'}
+                  <span className="text-gray-300">Reason:</span>
+                  <span className="font-semibold text-yellow-400 text-sm">
+                    {!userData.hasSufficientBalance ? 'Insufficient Balance' : 
+                     userData.hasParticipatedThisWeek ? 'Already Participated This Week' : 
+                     'Unknown Issue'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Total Casts:</span>
+                  <span className="font-semibold text-white">{userData.participationCount} casts</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Cost per cast:</span>
+                  <span className="font-semibold text-white">0.01 USDC</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Spending Summary */}
+            <div className="bg-gradient-to-r from-yellow-900/50 to-orange-900/50 rounded-xl p-6 border border-yellow-500/30">
+              <h4 className="font-semibold text-white mb-4">Spending Summary</h4>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Average per cast:</span>
+                  <span className="font-semibold text-white">
+                    {userData.participationCount > 0 
+                      ? (parseFloat(userData.totalSpent || '0') / userData.participationCount).toFixed(2) 
+                      : '0.00'} USDC
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">This week:</span>
+                  <span className="font-semibold text-white">
+                    {userData.participations?.filter(p => p.weekNumber === 1).length || 0} casts
                   </span>
                 </div>
               </div>
@@ -315,11 +370,11 @@ export default function UserDashboard() {
 
           {/* Fund Wallet Section */}
           {!userData.canParticipate && (
-            <div className="mt-6 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-6 border border-yellow-200">
-              <h4 className="font-semibold text-gray-900 mb-4">💰 Setup Required</h4>
+            <div className="mt-6 bg-gradient-to-r from-yellow-900/50 to-orange-900/50 rounded-xl p-6 border border-yellow-500/30">
+              <h4 className="font-semibold text-white mb-4">💰 Setup Required</h4>
               <div className="space-y-4">
-                <div className="bg-white rounded-lg p-4">
-                  <p className="text-gray-600 text-sm mb-3">
+                <div className="bg-gray-700 rounded-lg p-4 border border-gray-600">
+                  <p className="text-gray-300 text-sm mb-3">
                     You need USDC in your wallet and contract approval to participate.
                   </p>
                   <button
@@ -330,8 +385,8 @@ export default function UserDashboard() {
                     {isPending ? 'Approving...' : isConfirming ? 'Confirming...' : 'Approve Contract'}
                   </button>
                   {isSuccess && (
-                    <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-green-800 text-sm">✅ Approval successful!</p>
+                    <div className="mt-3 p-3 bg-green-900/50 border border-green-500/30 rounded-lg">
+                      <p className="text-green-300 text-sm">✅ Approval successful!</p>
                     </div>
                   )}
                 </div>
@@ -339,14 +394,39 @@ export default function UserDashboard() {
             </div>
           )}
 
+          {/* Participation History */}
+          {userData.participations && userData.participations.length > 0 && (
+            <div className="mt-6 bg-gradient-to-r from-purple-900/50 to-indigo-900/50 rounded-xl p-6 border border-purple-500/30">
+              <h4 className="font-semibold text-white mb-4">📊 Participation History</h4>
+              <div className="space-y-3 max-h-60 overflow-y-auto">
+                {userData.participations.map((participation, index) => (
+                  <div key={index} className="bg-gray-700 rounded-lg p-3 flex justify-between items-center border border-gray-600">
+                    <div>
+                      <p className="font-medium text-sm text-white">Cast #{index + 1}</p>
+                      <p className="text-xs text-gray-400">
+                        Week {participation.weekNumber} • {new Date(participation.timestamp * 1000).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-red-400">-{parseFloat(participation.usdcAmount).toFixed(2)} USDC</p>
+                      <p className="text-xs text-gray-400">
+                        {participation.isEvaluated ? '✅ Evaluated' : '⏳ Pending'}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Balance Management Section */}
-          <div className="mt-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-6 border border-green-200">
-            <h4 className="font-semibold text-gray-900 mb-4">💳 Balance Management</h4>
+          <div className="mt-6 bg-gradient-to-r from-green-900/50 to-blue-900/50 rounded-xl p-6 border border-green-500/30">
+            <h4 className="font-semibold text-white mb-4">💳 Balance Management</h4>
             <div className="grid md:grid-cols-2 gap-6">
               {/* Top Up Section */}
-              <div className="bg-white rounded-lg p-4">
-                <h5 className="font-medium text-gray-900 mb-3">Top Up Contract Balance</h5>
-                <p className="text-gray-600 text-sm mb-3">
+              <div className="bg-gray-700 rounded-lg p-4 border border-gray-600">
+                <h5 className="font-medium text-white mb-3">Top Up Contract Balance</h5>
+                <p className="text-gray-300 text-sm mb-3">
                   Add USDC to your contract balance to participate in casts:
                 </p>
                 <div className="space-y-3">
@@ -355,7 +435,7 @@ export default function UserDashboard() {
                     placeholder="Amount (USDC)"
                     value={topUpAmount}
                     onChange={(e) => setTopUpAmount(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-gray-800 text-white placeholder-gray-400"
                     step="0.01"
                     min="0.01"
                   />
@@ -370,9 +450,9 @@ export default function UserDashboard() {
               </div>
 
               {/* Withdraw Section */}
-              <div className="bg-white rounded-lg p-4">
-                <h5 className="font-medium text-gray-900 mb-3">Withdraw Balance</h5>
-                <p className="text-gray-600 text-sm mb-3">
+              <div className="bg-gray-700 rounded-lg p-4 border border-gray-600">
+                <h5 className="font-medium text-white mb-3">Withdraw Balance</h5>
+                <p className="text-gray-300 text-sm mb-3">
                   Withdraw unused USDC from your contract balance:
                 </p>
                 <div className="space-y-3">
@@ -381,7 +461,7 @@ export default function UserDashboard() {
                     placeholder="Amount (USDC)"
                     value={withdrawAmount}
                     onChange={(e) => setWithdrawAmount(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-800 text-white placeholder-gray-400"
                     step="0.01"
                     min="0.01"
                   />
@@ -401,7 +481,7 @@ export default function UserDashboard() {
         </>
       ) : (
         <div className="text-center py-8">
-          <p className="text-gray-600">Unable to load user data</p>
+          <p className="text-gray-300">Unable to load user data</p>
         </div>
       )}
     </div>
