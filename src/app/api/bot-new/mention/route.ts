@@ -338,20 +338,40 @@ async function checkSingleAddressBalance(userAddress: string): Promise<{ hasBala
         const balanceFormatted = ethers.formatUnits(usdcBalance, 6);
         console.log('USDC balance:', balanceFormatted);
         
-        // Check allowance for the contract
+        // Check allowance for the contract with retry
         let allowance = ethers.parseUnits('0', 6);
         let hasAllowance = false;
-        try {
-            allowance = await usdcContract.allowance(userAddress, CONTRACT_ADDRESS);
-            hasAllowance = allowance >= CAST_COST;
-            console.log('Contract allowance:', ethers.formatUnits(allowance, 6));
-        } catch (allowanceError) {
-            console.log('Allowance check failed (likely no approval):', allowanceError);
-            hasAllowance = false;
+        let allowanceCheckSuccess = false;
+        
+        // Try allowance check up to 3 times
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                allowance = await usdcContract.allowance(userAddress, CONTRACT_ADDRESS);
+                hasAllowance = allowance >= CAST_COST;
+                allowanceCheckSuccess = true;
+                console.log(`Allowance check successful (attempt ${attempt}):`, ethers.formatUnits(allowance, 6), 'USDC, Required:', ethers.formatUnits(CAST_COST, 6), 'USDC');
+                break;
+            } catch (allowanceError: any) {
+                console.log(`Allowance check failed (attempt ${attempt}) for address:`, userAddress, 'Error:', allowanceError);
+                if (attempt === 3) {
+                    // Final attempt failed, treat as no allowance
+                    console.log('All allowance check attempts failed - treating as no allowance for safety');
+                    hasAllowance = false;
+                    allowance = ethers.parseUnits('0', 6);
+                } else {
+                    // Wait a bit before retrying
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
         }
         
         // Check if user has enough balance and allowance
         const hasBalance = usdcBalance >= CAST_COST && hasAllowance;
+        
+        console.log('Final check for address:', userAddress);
+        console.log('- Balance:', balanceFormatted, 'USDC (>=', ethers.formatUnits(CAST_COST, 6), 'USDC):', usdcBalance >= CAST_COST);
+        console.log('- Allowance:', ethers.formatUnits(allowance, 6), 'USDC (>=', ethers.formatUnits(CAST_COST, 6), 'USDC):', hasAllowance);
+        console.log('- Can participate:', hasBalance);
         
         return {
             hasBalance,
