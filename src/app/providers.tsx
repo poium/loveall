@@ -13,7 +13,7 @@ const { chains, publicClient, webSocketPublicClient } = configureChains(
 
 const { connectors } = getDefaultWallets({
   appName: 'Loveall Prize Pool',
-  projectId: 'YOUR_WALLETCONNECT_PROJECT_ID', // You'll need to get this from WalletConnect
+  projectId: 'd0dcc070269b2059e4261acae1753f1dD', // You'll need to get this from WalletConnect
   chains,
 });
 
