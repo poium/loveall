@@ -60,14 +60,18 @@ Generate a response that feels natural and continues the conversation:`;
             interactionType
         });
 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+
         const response = await fetch('https://api.x.ai/v1/chat/completions', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${grokApiKey}`
             },
+            signal: controller.signal,
             body: JSON.stringify({
-                model: 'grok-3-mini',
+                model: 'grok-4',
                 messages: [
                     {
                         role: 'system',
@@ -79,9 +83,12 @@ Generate a response that feels natural and continues the conversation:`;
                     }
                 ],
                 max_tokens: 500,
-                temperature: 0.7
+                temperature: 0.7,
+                stream: false
             })
         });
+
+        clearTimeout(timeoutId); // Clear the timeout
 
         if (!response.ok) {
             console.error('Grok API error:', response.status, response.statusText);
