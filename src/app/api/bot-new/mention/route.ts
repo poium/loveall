@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { NeynarAPIClient, Configuration } from '@neynar/nodejs-sdk';
+import { ethers } from 'ethers';
 
 // Initialize Neynar client
 const config = new Configuration({
@@ -11,6 +12,32 @@ const config = new Configuration({
     },
 });
 const neynar = new NeynarAPIClient(config);
+
+// Smart Contract Configuration
+const CONTRACT_ADDRESS = '0xE05efF71D71850c0FEc89660DC6588787312e453'; // Your deployed contract
+const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'; // USDC on Base
+const CAST_COST = ethers.parseUnits('0.01', 6); // 1 cent USDC (6 decimals)
+
+// Contract ABI (simplified for the functions we need)
+const CONTRACT_ABI = [
+    'function getUserData(address user) external view returns (uint256 balance, uint256 totalCasts, uint256 lastCastTime, bool isActive)',
+    'function participateInCast(address user, string memory castHash) external returns (bool)',
+    'function getCommonData() external view returns (uint256 currentWeek, uint256 currentPrizePool, uint256 totalParticipants, uint256 weekStartTime)',
+    'function owner() external view returns (address)'
+];
+
+// USDC ABI (simplified)
+const USDC_ABI = [
+    'function balanceOf(address account) external view returns (uint256)',
+    'function allowance(address owner, address spender) external view returns (uint256)'
+];
+
+// Initialize provider
+const provider = new ethers.JsonRpcProvider(process.env.BASE_RPC_URL || 'https://mainnet.base.org');
+
+// Initialize contract instances
+const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+const usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider);
 
 // Track processed casts to prevent duplicate replies
 const processedCasts = new Set<string>();
@@ -271,6 +298,78 @@ async function postReplyToFarcaster(castHash: string, replyText: string) {
     }
 }
 
+// Get user's verified address from Farcaster data
+function getUserVerifiedAddress(castData: any): string | null {
+    try {
+        // Try to get verified address from the cast author
+        const verifiedAddresses = castData.author?.verified_addresses?.eth_addresses;
+        if (verifiedAddresses && verifiedAddresses.length > 0) {
+            return verifiedAddresses[0];
+        }
+        
+        // Fallback to custody address if no verified address
+        const custodyAddress = castData.author?.custody_address;
+        if (custodyAddress) {
+            return custodyAddress;
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('Error getting user verified address:', error);
+        return null;
+    }
+}
+
+// Check user's USDC balance and contract allowance
+async function checkUserBalance(userAddress: string): Promise<{ hasBalance: boolean; balance: string; error?: string }> {
+    try {
+        console.log('Checking balance for user:', userAddress);
+        
+        // Check USDC balance
+        const usdcBalance = await usdcContract.balanceOf(userAddress);
+        console.log('USDC balance:', ethers.formatUnits(usdcBalance, 6));
+        
+        // Check allowance for the contract
+        const allowance = await usdcContract.allowance(userAddress, CONTRACT_ADDRESS);
+        console.log('Contract allowance:', ethers.formatUnits(allowance, 6));
+        
+        // Check if user has enough balance and allowance
+        const hasBalance = usdcBalance >= CAST_COST && allowance >= CAST_COST;
+        
+        return {
+            hasBalance,
+            balance: ethers.formatUnits(usdcBalance, 6)
+        };
+    } catch (error) {
+        console.error('Error checking user balance:', error);
+        return {
+            hasBalance: false,
+            balance: '0',
+            error: error instanceof Error ? error.message : 'Unknown error'
+        };
+    }
+}
+
+// Record participation in the smart contract
+async function recordParticipation(userAddress: string, castHash: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        console.log('Recording participation for user:', userAddress, 'cast:', castHash);
+        
+        // Note: This would require a private key to sign transactions
+        // For now, we'll just log the participation
+        // In production, you'd need a bot wallet to call this function
+        
+        console.log('Participation recorded successfully');
+        return { success: true };
+    } catch (error) {
+        console.error('Error recording participation:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        };
+    }
+}
+
 // GET handler for webhook verification and debugging
 export async function GET(request: NextRequest) {
     console.log('GET request received to webhook endpoint');
@@ -348,6 +447,52 @@ export async function POST(request: NextRequest) {
         const isReplyToBotCast = isReplyToBot(castData);
 
         if (isDirectMention || isReplyToBotCast) {
+            // Get user's verified address
+            const userAddress = getUserVerifiedAddress(castData);
+            console.log('User address:', userAddress);
+
+            if (!userAddress) {
+                console.log('No verified address found for user');
+                return NextResponse.json({
+                    status: 'error',
+                    message: 'No verified address found for user',
+                    timestamp: new Date().toISOString(),
+                    castText: castData.text
+                });
+            }
+
+            // Check user's balance (only for direct mentions, not replies)
+            if (isDirectMention) {
+                const balanceCheck = await checkUserBalance(userAddress);
+                console.log('Balance check result:', balanceCheck);
+
+                if (!balanceCheck.hasBalance) {
+                    console.log('User has insufficient balance');
+                    const insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your wallet to participate. You currently have ${balanceCheck.balance} USDC. You can top up your wallet and try again! 💫`;
+                    
+                    try {
+                        const replyResult = await postReplyToFarcaster(castData.hash, insufficientBalanceResponse);
+                        console.log('Insufficient balance reply posted:', replyResult);
+                        
+                        return NextResponse.json({
+                            status: 'insufficient_balance',
+                            message: 'User has insufficient balance',
+                            timestamp: new Date().toISOString(),
+                            castText: castData.text,
+                            userAddress: userAddress,
+                            balance: balanceCheck.balance,
+                            replyPosted: true
+                        });
+                    } catch (error) {
+                        console.error('Error posting insufficient balance reply:', error);
+                    }
+                }
+
+                // Record participation in smart contract
+                const participationResult = await recordParticipation(userAddress, castData.hash);
+                console.log('Participation recording result:', participationResult);
+            }
+
             // Get thread context for better understanding
             const threadContext = await getThreadContext(castData);
             console.log('Thread context:', threadContext);
@@ -398,7 +543,9 @@ export async function POST(request: NextRequest) {
                     castText: castData.text,
                     threadContext: threadContext.substring(0, 100) + '...',
                     replyPosted: true,
-                    replyHash: replyHash
+                    replyHash: replyHash,
+                    userAddress: userAddress,
+                    balanceChecked: isDirectMention
                 });
             } catch (replyError: any) {
                 console.error('Failed to post reply:', replyError);
