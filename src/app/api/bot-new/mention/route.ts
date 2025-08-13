@@ -64,11 +64,10 @@ Generate a response that feels natural and continues the conversation:`;
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${grokApiKey}`,
-                'X-Groq-Provider': 'x-ai'
+                'Authorization': `Bearer ${grokApiKey}`
             },
             body: JSON.stringify({
-                model: 'grok-beta',
+                model: 'grok-3-mini',
                 messages: [
                     {
                         role: 'system',
