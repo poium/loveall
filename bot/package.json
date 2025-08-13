@@ -1,29 +1,22 @@
 {
   "name": "loveall-bot",
   "version": "1.0.0",
-  "description": "Loveall flirting bot for Farcaster",
-  "main": "loveall-bot.js",
+  "description": "Loveall bot for Vercel deployment",
+  "main": "webhook-server.js",
   "scripts": {
-    "start": "node loveall-bot.js",
-    "dev": "nodemon loveall-bot.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node webhook-server.js",
+    "dev": "nodemon webhook-server.js"
   },
   "dependencies": {
     "@neynar/nodejs-sdk": "^3.34.0",
+    "ethers": "^6.15.0",
     "dotenv": "^17.2.1",
-    "ethers": "^6.0.0",
-    "express": "^5.1.0"
+    "express": "^4.18.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.0"
   },
-  "keywords": [
-    "farcaster",
-    "bot",
-    "neynar",
-    "ethereum",
-    "base"
-  ],
-  "author": "Loveall Team",
-  "license": "MIT"
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }

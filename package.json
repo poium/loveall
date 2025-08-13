@@ -13,7 +13,10 @@
     "deploy:base": "hardhat run scripts/deploy.cjs --network base",
     "deploy:baseSepolia": "hardhat run scripts/deploy.cjs --network baseSepolia",
     "deploy:local": "hardhat run scripts/deploy.ts --network hardhat",
-    "verify:base": "hardhat run scripts/verify.cjs --network base"
+    "verify:base": "hardhat run scripts/verify.cjs --network base",
+    "bot:start": "node bot/webhook-server.js",
+    "bot:test": "node bot/test-all.js",
+    "bot:simple": "node bot/simple-bot.js"
   },
   "dependencies": {
     "@neynar/nodejs-sdk": "^3.34.0",
@@ -29,7 +32,8 @@
     "@nomicfoundation/hardhat-toolbox": "^6.1.0",
     "@nomicfoundation/hardhat-verify": "^2.1.1",
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/minimatch": "^6.0.0",
+    "@types/node": "^20.19.10",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
