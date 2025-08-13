@@ -3,7 +3,7 @@ import { NeynarAPIClient, Configuration } from '@neynar/nodejs-sdk';
 
 // Initialize Neynar client
 const config = new Configuration({
-    apiKey: process.env.NEYNAR_API_KEY,
+    apiKey: process.env.NEYNAR_API_KEY || '',
     baseOptions: {
         headers: {
             "x-neynar-experimental": true,
@@ -55,13 +55,12 @@ async function postReplyToFarcaster(castHash: string, replyText: string) {
             return { hash: 'test-hash', success: true, message: 'Test mode - reply not posted' };
         }
         
-        const reply = await neynar.publishCast(
-            process.env.NEYNAR_SIGNER_UUID!,
-            replyText,
-            {
-                replyTo: castHash
-            }
-        );
+        // Use the correct API call format for Neynar SDK v3
+        const reply = await neynar.publishCast({
+            signerUuid: process.env.NEYNAR_SIGNER_UUID!,
+            text: replyText,
+            parent: castHash
+        });
         
         console.log('Reply posted successfully:', reply);
         return reply;
@@ -138,6 +137,9 @@ export async function POST(request: NextRequest) {
                 const replyResult = await postReplyToFarcaster(castData.hash, response);
                 console.log('Reply posted successfully:', replyResult);
                 
+                // Handle both test and real responses
+                const replyHash = 'hash' in replyResult ? replyResult.hash : 'unknown';
+                
                 return NextResponse.json({ 
                     status: 'processed', 
                     response,
@@ -145,7 +147,7 @@ export async function POST(request: NextRequest) {
                     timestamp: new Date().toISOString(),
                     castText: castData.text,
                     replyPosted: true,
-                    replyHash: replyResult?.hash
+                    replyHash: replyHash
                 });
             } catch (replyError: any) {
                 console.error('Failed to post reply:', replyError);
