@@ -5,7 +5,41 @@ import { ethers } from 'ethers';
 const CONTRACT_ADDRESS = '0xE05efF71D71850c0FEc89660DC6588787312e453';
 const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
-// USDC ABI
+// Contract ABI
+const CONTRACT_ABI = [
+    {
+        name: 'getUserData',
+        type: 'function',
+        stateMutability: 'view',
+        inputs: [{ name: 'user', type: 'address' }],
+        outputs: [
+            {
+                components: [
+                    { name: 'balance', type: 'uint256' },
+                    { name: 'hasSufficientBalance', type: 'bool' },
+                    { name: 'hasParticipatedThisWeek', type: 'bool' },
+                    { name: 'participationsCount', type: 'uint256' },
+                    {
+                        components: [
+                            { name: 'user', type: 'address' },
+                            { name: 'castHash', type: 'bytes32' },
+                            { name: 'timestamp', type: 'uint256' },
+                            { name: 'weekNumber', type: 'uint256' },
+                            { name: 'usdcAmount', type: 'uint256' },
+                            { name: 'isEvaluated', type: 'bool' }
+                        ],
+                        name: 'participations',
+                        type: 'tuple[]'
+                    }
+                ],
+                name: '',
+                type: 'tuple'
+            }
+        ]
+    }
+];
+
+// USDC ABI for allowance check
 const USDC_ABI = [
     'function balanceOf(address account) external view returns (uint256)',
     'function allowance(address owner, address spender) external view returns (uint256)'
@@ -21,6 +55,7 @@ const RPC_ENDPOINTS = [
 ];
 
 let provider = new ethers.JsonRpcProvider(RPC_ENDPOINTS[0]);
+let contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
 let usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider);
 
 // Function to switch RPC endpoint
@@ -30,6 +65,7 @@ function switchRpcEndpoint() {
     const newRpcUrl = RPC_ENDPOINTS[currentRpcIndex];
     console.log(`Switching RPC endpoint to: ${newRpcUrl}`);
     provider = new ethers.JsonRpcProvider(newRpcUrl);
+    contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
     usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider);
 }
 
@@ -54,7 +90,27 @@ export async function GET(request: NextRequest) {
 
         console.log('Checking balance for address:', address);
 
-        // Check USDC balance with retry
+        // Get user data from contract with retry
+        let userData = null;
+        
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                userData = await contract.getUserData(address);
+                break;
+            } catch (error: any) {
+                console.log(`User data fetch failed (attempt ${attempt}):`, error);
+                if (attempt === 2) {
+                    switchRpcEndpoint();
+                }
+                if (attempt === 3) {
+                    console.log('All user data fetch attempts failed');
+                } else {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
+        }
+
+        // Check USDC balance for display purposes
         let usdcBalance = ethers.parseUnits('0', 6);
         let balanceFormatted = '0';
         
@@ -98,6 +154,12 @@ export async function GET(request: NextRequest) {
             }
         }
 
+        // Get contract balance and participation status
+        const contractBalance = userData ? ethers.formatUnits(userData.balance, 6) : '0';
+        const hasSufficientBalance = userData ? userData.hasSufficientBalance : false;
+        const hasParticipatedThisWeek = userData ? userData.hasParticipatedThisWeek : false;
+        const participationsCount = userData ? Number(userData.participationsCount) : 0;
+
         // Check if user has enough balance and allowance for 1 cent
         const CAST_COST = ethers.parseUnits('0.01', 6);
         const hasEnoughBalance = usdcBalance >= CAST_COST;
@@ -106,10 +168,14 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
             address: address,
             usdcBalance: balanceFormatted,
+            contractBalance: contractBalance,
             contractAllowance: allowanceFormatted,
             hasEnoughBalance: hasEnoughBalance,
             hasEnoughAllowance: hasEnoughAllowance,
-            canParticipate: hasEnoughBalance && hasEnoughAllowance,
+            hasSufficientBalance: hasSufficientBalance,
+            hasParticipatedThisWeek: hasParticipatedThisWeek,
+            participationsCount: participationsCount,
+            canParticipate: hasSufficientBalance && !hasParticipatedThisWeek,
             requiredAmount: '0.01',
             timestamp: new Date().toISOString()
         });

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
 import UserDashboard from './components/UserDashboard';
+import AdminDashboard from './components/AdminDashboard';
 
 interface PrizePoolData {
   currentWeek: number;
@@ -97,23 +98,17 @@ export default function Home() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Hero Section */}
-        <div className="text-center mb-16">
-          <h2 className="text-5xl font-bold text-gray-900 mb-6">
-            The Flirty Prize Pool Bot
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            Loveall Prize Pool
           </h2>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            Mention @loveall on Farcaster, pay 1 cent USDC, and get a chance to win the weekly prize pool! 
-            The bot uses Grok AI to evaluate cast quality and select winners.
+          <p className="text-lg text-gray-600 mb-6">
+            Mention @loveall on Farcaster to participate in the weekly prize pool
           </p>
-          
-          {!isConnected && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 max-w-md mx-auto">
-              <p className="text-yellow-800">
-                🔗 Connect your wallet to see your participation status
-              </p>
-            </div>
-          )}
         </div>
+
+        {/* Admin Dashboard */}
+        <AdminDashboard />
 
         {/* User Dashboard */}
         <UserDashboard />
@@ -159,81 +154,16 @@ export default function Home() {
           )}
         </div>
 
-        {/* How It Works */}
-        <div className="grid md:grid-cols-2 gap-12 mb-16">
-          <div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">How It Works</h3>
-            <div className="space-y-6">
-              <div className="flex items-start space-x-4">
-                <div className="w-8 h-8 bg-pink-500 text-white rounded-full flex items-center justify-center font-bold text-sm">
-                  1
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900">Mention the Bot</h4>
-                  <p className="text-gray-600">Send a cast mentioning @loveall on Farcaster</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start space-x-4">
-                <div className="w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold text-sm">
-                  2
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900">Pay 1 Cent USDC</h4>
-                  <p className="text-gray-600">Automatically deduct 0.01 USDC from your wallet</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start space-x-4">
-                <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-sm">
-                  3
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900">Get AI Response</h4>
-                  <p className="text-gray-600">Receive a personalized response from Grok AI</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start space-x-4">
-                <div className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold text-sm">
-                  4
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900">Win the Prize</h4>
-                  <p className="text-gray-600">Best cast of the week wins 90% of the prize pool!</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-gradient-to-br from-pink-100 to-purple-100 rounded-2xl p-8">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">Recent Activity</h3>
-            <div className="space-y-4">
-              <div className="bg-white rounded-lg p-4">
-                <p className="text-gray-600 text-sm">No recent activity yet</p>
-                <p className="text-gray-400 text-xs">Be the first to participate!</p>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Call to Action */}
-        <div className="text-center bg-gradient-to-r from-pink-500 to-purple-600 rounded-2xl p-12 text-white">
-          <h3 className="text-3xl font-bold mb-4">Ready to Start Flirting?</h3>
-          <p className="text-xl mb-8 opacity-90">
-            Connect your wallet and start participating in the Loveall prize pool!
-          </p>
-          <div className="flex justify-center">
-            <ConnectButton />
-          </div>
-        </div>
+
+
       </main>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 mt-16">
+      <footer className="bg-gray-100 py-6 mt-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-gray-400">
-            Built with ❤️ on Base Network | Powered by Grok AI
+          <p className="text-gray-600 text-sm">
+            Built on Base Network
           </p>
         </div>
       </footer>

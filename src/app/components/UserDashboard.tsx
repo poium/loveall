@@ -47,11 +47,85 @@ const USDC_ABI = [
   }
 ] as const;
 
+// Contract ABI for user functions
+const CONTRACT_ABI = [
+  {
+    name: 'getBalance',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'user', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }]
+  },
+  {
+    name: 'topUp',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'amount', type: 'uint256' }],
+    outputs: []
+  },
+  {
+    name: 'withdrawBalance',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'amount', type: 'uint256' }],
+    outputs: []
+  },
+  {
+    name: 'getUserData',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'user', type: 'address' }],
+    outputs: [
+      {
+        components: [
+          { name: 'balance', type: 'uint256' },
+          { name: 'hasSufficientBalance', type: 'bool' },
+          { name: 'hasParticipatedThisWeek', type: 'bool' },
+          { name: 'participationsCount', type: 'uint256' },
+          {
+            components: [
+              { name: 'user', type: 'address' },
+              { name: 'castHash', type: 'bytes32' },
+              { name: 'timestamp', type: 'uint256' },
+              { name: 'weekNumber', type: 'uint256' },
+              { name: 'usdcAmount', type: 'uint256' },
+              { name: 'isEvaluated', type: 'bool' }
+            ],
+            name: 'participations',
+            type: 'tuple[]'
+          }
+        ],
+        name: '',
+        type: 'tuple'
+      }
+    ]
+  },
+  {
+    name: 'hasSufficientBalance',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'user', type: 'address' }],
+    outputs: [{ name: '', type: 'bool' }]
+  },
+  {
+    name: 'hasParticipatedThisWeek',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [
+      { name: '', type: 'uint256' },
+      { name: '', type: 'address' }
+    ],
+    outputs: [{ name: '', type: 'bool' }]
+  }
+] as const;
+
 export default function UserDashboard() {
   const { address, isConnected, chainId } = useAccount();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(false);
   const [showFundSection, setShowFundSection] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [topUpAmount, setTopUpAmount] = useState('');
 
   // Contract write hooks
   const { writeContract, data: hash, isPending, error } = useWriteContract();
@@ -135,6 +209,56 @@ export default function UserDashboard() {
     }
   };
 
+  const topUpBalance = () => {
+    if (!address || !topUpAmount) {
+      alert('Please enter an amount to top up');
+      return;
+    }
+    
+    if (chainId !== 8453) {
+      alert('Please switch to Base network to top up your balance.');
+      return;
+    }
+    
+    try {
+      const amount = parseUnits(topUpAmount, 6);
+      writeContract({
+        address: CONTRACT_ADDRESS as `0x${string}`,
+        abi: CONTRACT_ABI,
+        functionName: 'topUp',
+        args: [amount],
+      });
+      setTopUpAmount('');
+    } catch (error) {
+      console.error('Error topping up balance:', error);
+    }
+  };
+
+  const withdrawBalance = () => {
+    if (!address || !withdrawAmount) {
+      alert('Please enter an amount to withdraw');
+      return;
+    }
+    
+    if (chainId !== 8453) {
+      alert('Please switch to Base network to withdraw your balance.');
+      return;
+    }
+    
+    try {
+      const amount = parseUnits(withdrawAmount, 6);
+      writeContract({
+        address: CONTRACT_ADDRESS as `0x${string}`,
+        abi: CONTRACT_ABI,
+        functionName: 'withdrawBalance',
+        args: [amount],
+      });
+      setWithdrawAmount('');
+    } catch (error) {
+      console.error('Error withdrawing balance:', error);
+    }
+  };
+
   if (!isConnected) {
     return null;
   }
@@ -192,86 +316,88 @@ export default function UserDashboard() {
           {/* Fund Wallet Section */}
           {!userData.canParticipate && (
             <div className="mt-6 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-6 border border-yellow-200">
-              <h4 className="font-semibold text-gray-900 mb-4">💰 Fund Your Wallet</h4>
+              <h4 className="font-semibold text-gray-900 mb-4">💰 Setup Required</h4>
               <div className="space-y-4">
                 <div className="bg-white rounded-lg p-4">
-                  <h5 className="font-medium text-gray-900 mb-2">Step 1: Add USDC to your wallet</h5>
                   <p className="text-gray-600 text-sm mb-3">
-                    You need at least 0.01 USDC to participate. You can get USDC from:
-                  </p>
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                      <span className="text-sm text-gray-700">Coinbase, Binance, or other exchanges</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                      <span className="text-sm text-gray-700">Bridge from Ethereum using Base Bridge</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                      <span className="text-sm text-gray-700">Buy directly on Base network</span>
-                    </div>
-                  </div>
-                  <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-600">
-                      <strong>USDC Contract:</strong> {USDC_ADDRESS}
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      <strong>Network:</strong> Base Mainnet
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-lg p-4">
-                  <h5 className="font-medium text-gray-900 mb-2">Step 2: Approve Contract</h5>
-                  <p className="text-gray-600 text-sm mb-3">
-                    Allow the Loveall contract to spend your USDC (0.01 USDC per cast):
+                    You need USDC in your wallet and contract approval to participate.
                   </p>
                   <button
                     onClick={approveContract}
                     disabled={isPending || isConfirming}
                     className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white font-medium py-3 px-4 rounded-lg hover:from-pink-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                   >
-                    {isPending ? 'Approving...' : isConfirming ? 'Confirming...' : 'Approve 100 USDC'}
+                    {isPending ? 'Approving...' : isConfirming ? 'Confirming...' : 'Approve Contract'}
                   </button>
                   {isSuccess && (
                     <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-green-800 text-sm font-medium">✅ Approval successful!</p>
-                      <p className="text-green-700 text-xs">You can now participate in the Loveall prize pool.</p>
+                      <p className="text-green-800 text-sm">✅ Approval successful!</p>
                     </div>
                   )}
-                  <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-600">
-                      <strong>Contract Address:</strong> {CONTRACT_ADDRESS}
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      <strong>Cost per cast:</strong> 0.01 USDC
-                    </p>
-                  </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <div className="flex flex-col sm:flex-row gap-4">
-              {userData.canParticipate ? (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <p className="text-green-800 font-medium">
-                    ✅ You're ready to participate! Mention @loveall on Farcaster to get started.
-                  </p>
+          {/* Balance Management Section */}
+          <div className="mt-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-6 border border-green-200">
+            <h4 className="font-semibold text-gray-900 mb-4">💳 Balance Management</h4>
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Top Up Section */}
+              <div className="bg-white rounded-lg p-4">
+                <h5 className="font-medium text-gray-900 mb-3">Top Up Contract Balance</h5>
+                <p className="text-gray-600 text-sm mb-3">
+                  Add USDC to your contract balance to participate in casts:
+                </p>
+                <div className="space-y-3">
+                  <input
+                    type="number"
+                    placeholder="Amount (USDC)"
+                    value={topUpAmount}
+                    onChange={(e) => setTopUpAmount(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    step="0.01"
+                    min="0.01"
+                  />
+                  <button
+                    onClick={topUpBalance}
+                    disabled={isPending || isConfirming || !topUpAmount}
+                    className="w-full bg-green-600 text-white font-medium py-2 px-4 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    {isPending ? 'Topping Up...' : isConfirming ? 'Confirming...' : 'Top Up Balance'}
+                  </button>
                 </div>
-              ) : (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <p className="text-yellow-800 font-medium">
-                    ⚠️ Follow the steps above to add USDC and approve the contract.
-                  </p>
+              </div>
+
+              {/* Withdraw Section */}
+              <div className="bg-white rounded-lg p-4">
+                <h5 className="font-medium text-gray-900 mb-3">Withdraw Balance</h5>
+                <p className="text-gray-600 text-sm mb-3">
+                  Withdraw unused USDC from your contract balance:
+                </p>
+                <div className="space-y-3">
+                  <input
+                    type="number"
+                    placeholder="Amount (USDC)"
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    step="0.01"
+                    min="0.01"
+                  />
+                  <button
+                    onClick={withdrawBalance}
+                    disabled={isPending || isConfirming || !withdrawAmount}
+                    className="w-full bg-blue-600 text-white font-medium py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    {isPending ? 'Withdrawing...' : isConfirming ? 'Confirming...' : 'Withdraw Balance'}
+                  </button>
                 </div>
-              )}
+              </div>
             </div>
           </div>
+
+
         </>
       ) : (
         <div className="text-center py-8">
