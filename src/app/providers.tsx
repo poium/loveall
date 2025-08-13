@@ -1,10 +1,15 @@
 'use client';
 
-import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
+import { RainbowKitProvider, getDefaultWallets } from '@rainbow-me/rainbowkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { base } from 'wagmi/chains';
 import '@rainbow-me/rainbowkit/styles.css';
+
+const { wallets } = getDefaultWallets({
+  appName: 'Loveall Prize Pool',
+  projectId: 'd0dcc070269b2059e4261acae1753f1d',
+});
 
 const config = createConfig({
   chains: [base],

@@ -24,20 +24,27 @@ const USDC_ABI = [
 ] as const;
 
 export default function UserDashboard() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chainId } = useAccount();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(false);
   const [showFundSection, setShowFundSection] = useState(false);
 
   // Contract write hooks
-  const { writeContract, data: hash, isPending } = useWriteContract();
+  const { writeContract, data: hash, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
   useEffect(() => {
     if (isConnected && address) {
+      console.log('Wallet connected:', { address, chainId });
       fetchUserData();
     }
   }, [isConnected, address, isSuccess]);
+
+  useEffect(() => {
+    if (error) {
+      console.error('Write contract error:', error);
+    }
+  }, [error]);
 
   const fetchUserData = async () => {
     if (!address) return;
@@ -68,8 +75,16 @@ export default function UserDashboard() {
       return;
     }
     
+    // Check if we're on Base network (chainId 8453)
+    if (chainId !== 8453) {
+      console.error('Wrong network! Please switch to Base network. Current chainId:', chainId);
+      alert('Please switch to Base network to approve the contract.');
+      return;
+    }
+    
     console.log('Approving contract...', {
       address,
+      chainId,
       contractAddress: CONTRACT_ADDRESS,
       usdcAddress: USDC_ADDRESS
     });
