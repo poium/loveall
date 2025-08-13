@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { parseUnits } from 'viem';
+import { parseUnits, formatUnits } from 'viem';
 
 interface UserData {
   balance: string;
@@ -23,111 +23,28 @@ interface UserData {
   }>;
 }
 
-// Contract addresses
 const CONTRACT_ADDRESS = '0xE05efF71D71850c0FEc89660DC6588787312e453';
 const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
-// USDC ABI for approve function
-const USDC_ABI = [
-  {
-    name: 'approve',
-    type: 'function',
-    stateMutability: 'nonpayable',
-    inputs: [
-      { name: 'spender', type: 'address' },
-      { name: 'amount', type: 'uint256' }
-    ],
-    outputs: [{ name: '', type: 'bool' }]
-  },
-  {
-    name: 'balanceOf',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ name: 'account', type: 'address' }],
-    outputs: [{ name: '', type: 'uint256' }]
-  },
-  {
-    name: 'allowance',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [
-      { name: 'owner', type: 'address' },
-      { name: 'spender', type: 'address' }
-    ],
-    outputs: [{ name: '', type: 'uint256' }]
-  }
-] as const;
-
-// Contract ABI for user functions
 const CONTRACT_ABI = [
-  {
-    name: 'getBalance',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ name: 'user', type: 'address' }],
-    outputs: [{ name: '', type: 'uint256' }]
-  },
-  {
-    name: 'topUp',
-    type: 'function',
-    stateMutability: 'nonpayable',
-    inputs: [{ name: 'amount', type: 'uint256' }],
-    outputs: []
-  },
-  {
-    name: 'withdrawBalance',
-    type: 'function',
-    stateMutability: 'nonpayable',
-    inputs: [{ name: 'amount', type: 'uint256' }],
-    outputs: []
-  },
+  { name: 'getBalance', type: 'function', stateMutability: 'view', inputs: [{ name: 'user', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] },
+  { name: 'topUp', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'amount', type: 'uint256' }], outputs: [] },
+  { name: 'withdrawBalance', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'amount', type: 'uint256' }], outputs: [] },
   {
     name: 'getUserData',
     type: 'function',
     stateMutability: 'view',
     inputs: [{ name: 'user', type: 'address' }],
-    outputs: [
-      {
-        components: [
-          { name: 'balance', type: 'uint256' },
-          { name: 'hasSufficientBalance', type: 'bool' },
-          { name: 'hasParticipatedThisWeek', type: 'bool' },
-          { name: 'participationsCount', type: 'uint256' },
-          {
-            components: [
-              { name: 'user', type: 'address' },
-              { name: 'castHash', type: 'bytes32' },
-              { name: 'timestamp', type: 'uint256' },
-              { name: 'weekNumber', type: 'uint256' },
-              { name: 'usdcAmount', type: 'uint256' },
-              { name: 'isEvaluated', type: 'bool' }
-            ],
-            name: 'participations',
-            type: 'tuple[]'
-          }
-        ],
-        name: '',
-        type: 'tuple'
-      }
-    ]
+    outputs: [{ components: [/* ... UserData struct ... */], name: '', type: 'tuple' }]
   },
-  {
-    name: 'hasSufficientBalance',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ name: 'user', type: 'address' }],
-    outputs: [{ name: '', type: 'bool' }]
-  },
-  {
-    name: 'hasParticipatedThisWeek',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [
-      { name: '', type: 'uint256' },
-      { name: '', type: 'address' }
-    ],
-    outputs: [{ name: '', type: 'bool' }]
-  }
+  { name: 'hasSufficientBalance', type: 'function', stateMutability: 'view', inputs: [{ name: 'user', type: 'address' }], outputs: [{ name: '', type: 'bool' }] },
+  { name: 'hasParticipatedThisWeek', type: 'function', stateMutability: 'view', inputs: [{ name: '', type: 'uint256' }, { name: '', type: 'address' }], outputs: [{ name: '', type: 'bool' }] }
+] as const;
+
+const USDC_ABI = [
+  { name: 'approve', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }], outputs: [{ name: '', type: 'bool' }] },
+  { name: 'balanceOf', type: 'function', stateMutability: 'view', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] },
+  { name: 'allowance', type: 'function', stateMutability: 'view', inputs: [{ name: 'owner', type: 'address' }, { name: 'spender', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] }
 ] as const;
 
 export default function UserDashboard() {
@@ -163,8 +80,8 @@ export default function UserDashboard() {
       const response = await fetch(`/api/check-balance?address=${address}`);
       if (response.ok) {
         const data = await response.json();
-        console.log('API Response:', data); // Debug log
-        // Calculate total spent from participations
+        console.log('API Response:', data);
+        
         const participations = data.participations || [];
         const totalSpent = participations.reduce((total: number, participation: any) => {
           return total + parseFloat(participation.usdcAmount || '0');
@@ -172,9 +89,9 @@ export default function UserDashboard() {
 
         setUserData({
           balance: data.contractBalance || '0',
-          allowance: '0', // Not needed anymore - using contract balance
+          allowance: '0',
           participationCount: data.participationsCount || 0,
-          lastParticipation: 0, // TODO: Add participation tracking
+          lastParticipation: 0,
           canParticipate: data.canParticipate || false,
           totalSpent: totalSpent.toFixed(2),
           hasSufficientBalance: data.hasSufficientBalance || false,
@@ -190,13 +107,7 @@ export default function UserDashboard() {
   };
 
   const approveContract = () => {
-    if (!address) {
-      console.log('No address found');
-      return;
-    }
-    
-    // Check if we're on Base network (chainId 8453)
-    if (chainId !== 8453) {
+    if (!address || chainId !== 8453) {
       console.error('Wrong network! Please switch to Base network. Current chainId:', chainId);
       alert('Please switch to Base network to approve the contract.');
       return;
@@ -209,14 +120,12 @@ export default function UserDashboard() {
       usdcAddress: USDC_ADDRESS
     });
     
-    // Check if writeContract is available
     if (!writeContract) {
       console.error('writeContract is not available');
       return;
     }
     
-    // Approve 100 USDC (enough for many casts)
-    const amount = parseUnits('100', 6); // USDC has 6 decimals
+    const amount = parseUnits('100', 6);
     
     try {
       const result = writeContract({
@@ -286,9 +195,9 @@ export default function UserDashboard() {
   }
 
   return (
-    <div className="bg-gray-800 rounded-2xl shadow-xl p-8 mb-8 border border-purple-500/30">
+    <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-purple-500/20">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-2xl font-bold text-white">Your Dashboard</h3>
+        <h3 className="text-xl font-bold text-white">Your Dashboard</h3>
         <div className="text-sm text-gray-400">
           {address?.slice(0, 6)}...{address?.slice(-4)}
         </div>
@@ -300,188 +209,164 @@ export default function UserDashboard() {
           <p className="mt-2 text-gray-300">Loading your data...</p>
         </div>
       ) : userData ? (
-        <>
-          <div className="grid md:grid-cols-3 gap-6">
-            {/* Balance Section */}
-            <div className="bg-gradient-to-r from-pink-900/50 to-purple-900/50 rounded-xl p-6 border border-pink-500/30">
-              <h4 className="font-semibold text-white mb-4">Contract Balance</h4>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Available:</span>
-                  <span className="font-semibold text-white">{isNaN(parseFloat(userData.balance || '0')) ? '0.00' : parseFloat(userData.balance || '0').toFixed(2)} USDC</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Total Spent:</span>
-                  <span className="font-semibold text-red-400">{parseFloat(userData.totalSpent || '0').toFixed(2)} USDC</span>
-                </div>
+        <div className="space-y-6">
+          {/* Balance Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 rounded-xl p-4 border border-green-500/20">
+              <div className="text-2xl font-bold text-green-400 mb-1">
+                {parseFloat(userData.balance || '0').toFixed(2)} USDC
+              </div>
+              <p className="text-gray-300 text-sm">Contract Balance</p>
+            </div>
+            
+            <div className="bg-gradient-to-r from-blue-900/30 to-cyan-900/30 rounded-xl p-4 border border-blue-500/20">
+              <div className="text-2xl font-bold text-blue-400 mb-1">
+                {userData.participationCount}
+              </div>
+              <p className="text-gray-300 text-sm">Total Casts</p>
+            </div>
+            
+            <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 rounded-xl p-4 border border-purple-500/20">
+              <div className="text-2xl font-bold text-purple-400 mb-1">
+                {parseFloat(userData.totalSpent || '0').toFixed(2)} USDC
+              </div>
+              <p className="text-gray-300 text-sm">Total Spent</p>
+            </div>
+          </div>
+
+          {/* Participation Status */}
+          <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-semibold text-white mb-1">Participation Status</h4>
+                <p className="text-sm text-gray-300">
+                  {userData.canParticipate ? 'Ready to participate' : 'Cannot participate'}
+                </p>
+              </div>
+              <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                userData.canParticipate 
+                  ? 'bg-green-900/50 text-green-400 border border-green-500/30' 
+                  : 'bg-red-900/50 text-red-400 border border-red-500/30'
+              }`}>
+                {userData.canParticipate ? 'Active' : 'Inactive'}
               </div>
             </div>
+            {!userData.canParticipate && (
+              <p className="text-xs text-yellow-400 mt-2">
+                {!userData.hasSufficientBalance ? 'Insufficient balance' : 
+                 userData.hasParticipatedThisWeek ? 'Already participated this week' : 
+                 'Unknown issue'}
+              </p>
+            )}
+          </div>
 
-            {/* Participation Section */}
-            <div className="bg-gradient-to-r from-blue-900/50 to-green-900/50 rounded-xl p-6 border border-blue-500/30">
-              <h4 className="font-semibold text-white mb-4">Participation Status</h4>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Status:</span>
-                  <span className={`font-semibold ${userData.canParticipate ? 'text-green-400' : 'text-red-400'}`}>
-                    {userData.canParticipate ? 'Ready to Participate' : 'Cannot Participate'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Reason:</span>
-                  <span className="font-semibold text-yellow-400 text-sm">
-                    {!userData.hasSufficientBalance ? 'Insufficient Balance' : 
-                     userData.hasParticipatedThisWeek ? 'Already Participated This Week' : 
-                     'Unknown Issue'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Total Casts:</span>
-                  <span className="font-semibold text-white">{userData.participationCount} casts</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Cost per cast:</span>
-                  <span className="font-semibold text-white">0.01 USDC</span>
+          {/* Balance Management */}
+          <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600/20">
+            <h4 className="font-semibold text-white mb-4">Balance Management</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Top Up */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Top Up Balance</label>
+                <div className="flex space-x-2">
+                  <input
+                    type="number"
+                    placeholder="0.01"
+                    value={topUpAmount}
+                    onChange={(e) => setTopUpAmount(e.target.value)}
+                    className="flex-1 px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                  <button
+                    onClick={topUpBalance}
+                    disabled={isPending || !topUpAmount}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Top Up
+                  </button>
                 </div>
               </div>
-            </div>
 
-            {/* Spending Summary */}
-            <div className="bg-gradient-to-r from-yellow-900/50 to-orange-900/50 rounded-xl p-6 border border-yellow-500/30">
-              <h4 className="font-semibold text-white mb-4">Spending Summary</h4>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Average per cast:</span>
-                  <span className="font-semibold text-white">
-                    {userData.participationCount > 0 
-                      ? (parseFloat(userData.totalSpent || '0') / userData.participationCount).toFixed(2) 
-                      : '0.00'} USDC
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-300">This week:</span>
-                  <span className="font-semibold text-white">
-                    {userData.participations?.filter(p => p.weekNumber === 1).length || 0} casts
-                  </span>
+              {/* Withdraw */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Withdraw Balance</label>
+                <div className="flex space-x-2">
+                  <input
+                    type="number"
+                    placeholder="0.01"
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    className="flex-1 px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <button
+                    onClick={withdrawBalance}
+                    disabled={isPending || !withdrawAmount}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Withdraw
+                  </button>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Fund Wallet Section */}
-          {!userData.canParticipate && (
-            <div className="mt-6 bg-gradient-to-r from-yellow-900/50 to-orange-900/50 rounded-xl p-6 border border-yellow-500/30">
-              <h4 className="font-semibold text-white mb-4">💰 Setup Required</h4>
-              <div className="space-y-4">
-                <div className="bg-gray-700 rounded-lg p-4 border border-gray-600">
-                  <p className="text-gray-300 text-sm mb-3">
-                    You need USDC in your wallet and contract approval to participate.
-                  </p>
-                  <button
-                    onClick={approveContract}
-                    disabled={isPending || isConfirming}
-                    className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white font-medium py-3 px-4 rounded-lg hover:from-pink-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                  >
-                    {isPending ? 'Approving...' : isConfirming ? 'Confirming...' : 'Approve Contract'}
-                  </button>
-                  {isSuccess && (
-                    <div className="mt-3 p-3 bg-green-900/50 border border-green-500/30 rounded-lg">
-                      <p className="text-green-300 text-sm">✅ Approval successful!</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Participation History */}
           {userData.participations && userData.participations.length > 0 && (
-            <div className="mt-6 bg-gradient-to-r from-purple-900/50 to-indigo-900/50 rounded-xl p-6 border border-purple-500/30">
-              <h4 className="font-semibold text-white mb-4">📊 Participation History</h4>
-              <div className="space-y-3 max-h-60 overflow-y-auto">
-                {userData.participations.map((participation, index) => (
-                  <div key={index} className="bg-gray-700 rounded-lg p-3 flex justify-between items-center border border-gray-600">
+            <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600/20">
+              <h4 className="font-semibold text-white mb-4">Recent Activity</h4>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {userData.participations.slice(0, 5).map((participation, index) => (
+                  <div key={index} className="flex justify-between items-center py-2 px-3 bg-gray-600/30 rounded-lg">
                     <div>
-                      <p className="font-medium text-sm text-white">Cast #{index + 1}</p>
+                      <p className="text-sm text-white">Cast #{participation.castHash.slice(0, 8)}...</p>
                       <p className="text-xs text-gray-400">
-                        Week {participation.weekNumber} • {new Date(participation.timestamp * 1000).toLocaleDateString()}
+                        {new Date(participation.timestamp * 1000).toLocaleDateString()}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-red-400">-{parseFloat(participation.usdcAmount).toFixed(2)} USDC</p>
-                      <p className="text-xs text-gray-400">
-                        {participation.isEvaluated ? '✅ Evaluated' : '⏳ Pending'}
-                      </p>
+                    <div className="text-sm text-green-400">
+                      -{participation.usdcAmount} USDC
                     </div>
                   </div>
                 ))}
               </div>
             </div>
           )}
-
-          {/* Balance Management Section */}
-          <div className="mt-6 bg-gradient-to-r from-green-900/50 to-blue-900/50 rounded-xl p-6 border border-green-500/30">
-            <h4 className="font-semibold text-white mb-4">💳 Balance Management</h4>
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Top Up Section */}
-              <div className="bg-gray-700 rounded-lg p-4 border border-gray-600">
-                <h5 className="font-medium text-white mb-3">Top Up Contract Balance</h5>
-                <p className="text-gray-300 text-sm mb-3">
-                  Add USDC to your contract balance to participate in casts:
-                </p>
-                <div className="space-y-3">
-                  <input
-                    type="number"
-                    placeholder="Amount (USDC)"
-                    value={topUpAmount}
-                    onChange={(e) => setTopUpAmount(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-gray-800 text-white placeholder-gray-400"
-                    step="0.01"
-                    min="0.01"
-                  />
-                  <button
-                    onClick={topUpBalance}
-                    disabled={isPending || isConfirming || !topUpAmount}
-                    className="w-full bg-green-600 text-white font-medium py-2 px-4 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                  >
-                    {isPending ? 'Topping Up...' : isConfirming ? 'Confirming...' : 'Top Up Balance'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Withdraw Section */}
-              <div className="bg-gray-700 rounded-lg p-4 border border-gray-600">
-                <h5 className="font-medium text-white mb-3">Withdraw Balance</h5>
-                <p className="text-gray-300 text-sm mb-3">
-                  Withdraw unused USDC from your contract balance:
-                </p>
-                <div className="space-y-3">
-                  <input
-                    type="number"
-                    placeholder="Amount (USDC)"
-                    value={withdrawAmount}
-                    onChange={(e) => setWithdrawAmount(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-800 text-white placeholder-gray-400"
-                    step="0.01"
-                    min="0.01"
-                  />
-                  <button
-                    onClick={withdrawBalance}
-                    disabled={isPending || isConfirming || !withdrawAmount}
-                    className="w-full bg-blue-600 text-white font-medium py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                  >
-                    {isPending ? 'Withdrawing...' : isConfirming ? 'Confirming...' : 'Withdraw Balance'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-
-        </>
+        </div>
       ) : (
         <div className="text-center py-8">
-          <p className="text-gray-300">Unable to load user data</p>
+          <p className="text-gray-300">Failed to load user data</p>
+        </div>
+      )}
+
+      {/* Transaction Status */}
+      {(isPending || isConfirming) && (
+        <div className="mt-4 p-3 bg-blue-900/50 border border-blue-500/30 rounded-lg">
+          <div className="flex items-center space-x-3">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
+            <p className="text-blue-300 text-sm">
+              {isPending ? 'Transaction pending...' : 'Confirming transaction...'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {isSuccess && (
+        <div className="mt-4 p-3 bg-green-900/50 border border-green-500/30 rounded-lg">
+          <div className="flex items-center space-x-3">
+            <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+              <span className="text-white text-xs">✓</span>
+            </div>
+            <p className="text-green-300 text-sm">Transaction successful!</p>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-4 p-3 bg-red-900/50 border border-red-500/30 rounded-lg">
+          <div className="flex items-center space-x-3">
+            <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+              <span className="text-white text-xs">✗</span>
+            </div>
+            <p className="text-red-300 text-sm">Transaction failed: {error.message}</p>
+          </div>
         </div>
       )}
     </div>

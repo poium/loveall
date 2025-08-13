@@ -138,23 +138,68 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (isConnected && address) {
+      console.log('useEffect triggered - fetching admin data for:', address);
       fetchAdminData();
       fetchWeeklyWinners();
     }
   }, [isConnected, address, isSuccess]);
+
+  useEffect(() => {
+    console.log('adminData changed:', adminData);
+  }, [adminData]);
 
   const fetchAdminData = async () => {
     if (!address) return;
     
     try {
       setLoading(true);
+      console.log('Fetching admin data for address:', address);
       const response = await fetch(`/api/admin-data?address=${address}`);
       if (response.ok) {
         const data = await response.json();
-        setAdminData(data);
+        console.log('Admin data received:', data);
+        
+        // Force the data to be properly formatted
+        const formattedData = {
+          ...data,
+          currentPrizePool: data.currentPrizePool || '0',
+          totalParticipants: data.totalParticipants || 0,
+          currentWeek: data.currentWeek || 1,
+          totalPrizePool: data.totalPrizePool || '0',
+          rolloverAmount: data.rolloverAmount || '0',
+          weekStartTime: data.weekStartTime || 0,
+          isOwner: data.isOwner || false
+        };
+        
+        console.log('Formatted admin data:', formattedData);
+        setAdminData(formattedData);
+      } else {
+        console.error('Admin data fetch failed:', response.status, response.statusText);
+        // Set default data if fetch fails
+        setAdminData({
+          address: address,
+          isOwner: false,
+          currentWeek: 0,
+          currentPrizePool: '0',
+          totalParticipants: 0,
+          weekStartTime: 0,
+          rolloverAmount: '0',
+          totalPrizePool: '0'
+        });
       }
     } catch (error) {
       console.error('Error fetching admin data:', error);
+      // Set default data if error occurs
+      setAdminData({
+        address: address,
+        isOwner: false,
+        currentWeek: 0,
+        currentPrizePool: '0',
+        totalParticipants: 0,
+        weekStartTime: 0,
+        rolloverAmount: '0',
+        totalPrizePool: '0'
+      });
     } finally {
       setLoading(false);
     }
@@ -242,16 +287,41 @@ export default function AdminDashboard() {
       <div className="bg-gray-800 rounded-2xl shadow-xl p-8 mb-8 border border-purple-500/30">
         <h3 className="text-2xl font-bold text-white mb-4">Admin Dashboard</h3>
         <p className="text-gray-300">Only the contract owner can access admin functions.</p>
+        {adminData && (
+          <div className="mt-4 p-4 bg-gray-700 rounded-lg">
+            <p className="text-sm text-gray-400">
+              Connected: {address?.slice(0, 6)}...{address?.slice(-4)}
+            </p>
+            <p className="text-sm text-gray-400">
+              Is Owner: {adminData.isOwner ? 'Yes' : 'No'}
+            </p>
+            <p className="text-sm text-gray-400">
+              Current Prize Pool: {adminData.currentPrizePool} USDC
+            </p>
+            <p className="text-sm text-gray-400">
+              Total Participants: {adminData.totalParticipants}
+            </p>
+          </div>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-800 rounded-2xl shadow-xl p-8 mb-8 border border-purple-500/30">
+    <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-purple-500/20">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-2xl font-bold text-white">Admin Dashboard</h3>
-        <div className="text-sm text-gray-400">
-          {address?.slice(0, 6)}...{address?.slice(-4)}
+        <h3 className="text-xl font-bold text-white">Admin Dashboard</h3>
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={fetchAdminData}
+            disabled={loading}
+            className="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 disabled:opacity-50"
+          >
+            {loading ? 'Refreshing...' : 'Refresh Data'}
+          </button>
+          <div className="text-sm text-gray-400">
+            {address?.slice(0, 6)}...{address?.slice(-4)}
+          </div>
         </div>
       </div>
 
@@ -277,8 +347,10 @@ export default function AdminDashboard() {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-400 mx-auto"></div>
           <p className="mt-2 text-gray-300">Loading admin data...</p>
         </div>
-      ) : (
+              ) : (
         <>
+
+
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -291,6 +363,9 @@ export default function AdminDashboard() {
                 <h4 className="font-semibold text-white mb-2">Current Prize Pool</h4>
                 <p className="text-3xl font-bold text-blue-400">
                   ${parseFloat(adminData?.currentPrizePool || '0').toFixed(2)}
+                </p>
+                <p className="text-xs text-gray-500">
+                  Type: {typeof adminData?.currentPrizePool}
                 </p>
               </div>
 
@@ -316,7 +391,25 @@ export default function AdminDashboard() {
               <div className="bg-gradient-to-r from-red-900/50 to-pink-900/50 rounded-xl p-6 border border-red-500/30">
                 <h4 className="font-semibold text-white mb-2">Week End Time</h4>
                 <p className="text-lg font-semibold text-red-400">
-                  {adminData?.weekStartTime ? new Date(adminData.weekStartTime * 1000).toLocaleDateString() : 'N/A'}
+                  {adminData?.weekStartTime ? (
+                    <>
+                      <div>{new Date(adminData.weekStartTime * 1000).toLocaleDateString()}</div>
+                      <div className="text-sm">
+                        {(() => {
+                          const weekEndTime = adminData.weekStartTime + (2 * 60 * 60); // 2 hours in seconds
+                          const now = Math.floor(Date.now() / 1000);
+                          const remaining = weekEndTime - now;
+                          if (remaining > 0) {
+                            const days = Math.floor(remaining / (24 * 60 * 60));
+                            const hours = Math.floor((remaining % (24 * 60 * 60)) / (60 * 60));
+                            return `${days}d ${hours}h remaining`;
+                          } else {
+                            return 'Week ended';
+                          }
+                        })()}
+                      </div>
+                    </>
+                  ) : 'N/A'}
                 </p>
               </div>
             </div>
