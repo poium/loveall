@@ -12,6 +12,19 @@ const config = new Configuration({
 });
 const neynar = new NeynarAPIClient(config);
 
+// Track processed casts to prevent duplicate replies
+const processedCasts = new Set<string>();
+
+// Clean up old entries periodically (keep last 1000)
+function cleanupProcessedCasts() {
+    if (processedCasts.size > 1000) {
+        const entries = Array.from(processedCasts);
+        processedCasts.clear();
+        // Keep only the last 500 entries
+        entries.slice(-500).forEach(hash => processedCasts.add(hash));
+    }
+}
+
 // Grok AI integration for context-aware responses
 async function getGrokResponse(castText: string, threadContext: string, interactionType: string) {
     try {
@@ -296,6 +309,21 @@ export async function POST(request: NextRequest) {
         if (!castData || !castData.text) {
             return NextResponse.json({ error: 'No cast text provided' }, { status: 400 });
         }
+
+        // Check if we've already processed this cast to prevent duplicate replies
+        if (processedCasts.has(castData.hash)) {
+            console.log('Cast already processed, skipping:', castData.hash);
+            return NextResponse.json({
+                status: 'already_processed',
+                message: 'Cast already processed, skipping duplicate',
+                timestamp: new Date().toISOString(),
+                castHash: castData.hash
+            });
+        }
+
+        // Add to processed casts
+        processedCasts.add(castData.hash);
+        cleanupProcessedCasts(); // Clean up old entries periodically
 
         console.log('Processing cast:', castData.text);
         console.log('Cast data:', {
