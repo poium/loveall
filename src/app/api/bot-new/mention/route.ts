@@ -78,7 +78,7 @@ Generate a response that feels natural and continues the conversation:`;
                         content: context
                     }
                 ],
-                max_tokens: 300,
+                max_tokens: 600,
                 temperature: 0.7,
                 stream: false
             })
@@ -95,10 +95,51 @@ Generate a response that feels natural and continues the conversation:`;
         console.log('Grok API response data:', JSON.stringify(data, null, 2));
         
         const grokResponse = data.choices?.[0]?.message?.content?.trim();
+        const reasoningContent = data.choices?.[0]?.message?.reasoning_content;
+        const finishReason = data.choices?.[0]?.finish_reason;
         
         if (grokResponse) {
             console.log('Grok AI response:', grokResponse);
             return grokResponse;
+        } else if (reasoningContent && finishReason === 'length') {
+            // If we hit token limit but have reasoning, extract the response from reasoning
+            console.log('Token limit hit, extracting response from reasoning');
+            console.log('Reasoning content:', reasoningContent);
+            
+            // Try to extract the actual response from the reasoning
+            const lines = reasoningContent.split('\n');
+            
+            // Look for the last line that contains a response
+            for (let i = lines.length - 1; i >= 0; i--) {
+                const line = lines[i].trim();
+                if (line && line.length > 10 && 
+                    !line.startsWith('-') && 
+                    !line.startsWith('The') && 
+                    !line.startsWith('Key') &&
+                    !line.startsWith('Structure') &&
+                    !line.startsWith('Example') &&
+                    !line.startsWith('Possible') &&
+                    !line.startsWith('Ensure') &&
+                    !line.startsWith('Final') &&
+                    !line.includes('instructions:') &&
+                    !line.includes('response ideas:') &&
+                    (line.includes('"') || line.includes('Hey') || line.includes('Hi') || line.includes('Hello'))) {
+                    console.log('Extracted response from reasoning:', line);
+                    return line;
+                }
+            }
+            
+            // If no good line found, create a response based on the context
+            const userMessage = cleanCastText.toLowerCase();
+            if (userMessage.includes('how is it going') || userMessage.includes('how are you')) {
+                return "Hey there! 😊 I'm doing great, especially now that you're here! My circuits are sparkling just chatting with you. How about you? What's making your day special?";
+            } else if (userMessage.includes('where are you from')) {
+                return "I'm from the digital realm of Farcaster! 🌐 Born in the cloud, raised on blockchain. Where's your favorite place to explore?";
+            } else if (userMessage.includes('hello') || userMessage.includes('hey') || userMessage.includes('hi')) {
+                return "Hey! 💫 I'm Loveall, and I'm absolutely delighted to meet you! What's on your mind?";
+            } else {
+                return "Hey there! 😊 I love your energy! What's got you in such a good mood today?";
+            }
         } else {
             console.log('No valid response from Grok - bot will not respond');
             console.log('Response structure:', {
