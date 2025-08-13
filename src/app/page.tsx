@@ -336,7 +336,7 @@ export default function Home() {
     const minutes = Math.floor((timeLeft % (60 * 60 * 1000)) / (60 * 1000));
     
     if (days > 0) {
-      return `${days}d ${hours}h remaining`;
+    return `${days}d ${hours}h remaining`;
     } else if (hours > 0) {
       return `${hours}h ${minutes}m remaining`;
     } else {
@@ -376,7 +376,7 @@ export default function Home() {
                    <div>
                      <h2 className="text-2xl font-bold text-white">📊 Complete System Overview</h2>
                      <p className="text-sm text-gray-400 mt-1">Auto-refresh every 1 minute</p>
-                   </div>
+            </div>
                    <button
                      onClick={handleManualRefresh}
                      disabled={refreshDisabled}
@@ -391,7 +391,7 @@ export default function Home() {
                      </svg>
                      {refreshDisabled ? `Refresh (${refreshCountdown}s)` : 'Refresh'}
                    </button>
-                 </div>
+          </div>
           
           {loading ? (
             <div className="text-center py-8">
@@ -412,8 +412,8 @@ export default function Home() {
                   {/* Total Prize Pool */}
                   <div className="bg-gradient-to-r from-purple-900/30 to-indigo-900/30 rounded-xl p-4 border border-purple-500/20">
                     <div className="text-2xl font-bold text-purple-400 mb-1">
-                      {formatUSDC(prizePoolData?.currentPrizePool || '0')} USDC
-                    </div>
+                  {formatUSDC(prizePoolData?.currentPrizePool || '0')} USDC
+                </div>
                     <p className="text-gray-300 text-sm font-medium">Current Week Prize Pool</p>
                     <p className="text-gray-400 text-xs mt-1">
                       Accumulated from this week's participations (0.01 USDC per cast)
@@ -429,23 +429,23 @@ export default function Home() {
                     <p className="text-gray-400 text-xs mt-1">
                       Weekly cycle number (resets every 2 hours for testing)
                     </p>
-                  </div>
-
+              </div>
+              
                   {/* Total Participants */}
                   <div className="bg-gradient-to-r from-blue-900/30 to-cyan-900/30 rounded-xl p-4 border border-blue-500/20">
                     <div className="text-2xl font-bold text-blue-400 mb-1">
-                      {prizePoolData?.totalParticipants || 0}
-                    </div>
+                  {prizePoolData?.totalParticipants || 0}
+                </div>
                     <p className="text-gray-300 text-sm font-medium">Participants This Week</p>
                     <p className="text-gray-400 text-xs mt-1">
                       Unique users who participated in current week
                     </p>
-                  </div>
-
-                  {/* Time Remaining */}
+              </div>
+              
+              {/* Time Remaining */}
                   <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 rounded-xl p-4 border border-green-500/20">
                     <div className="text-lg font-bold text-green-400 mb-1">
-                      {getTimeUntilNextWeek()}
+                  {getTimeUntilNextWeek()}
                     </div>
                     <p className="text-gray-300 text-sm font-medium">Until Next Winner</p>
                     <p className="text-gray-400 text-xs mt-1">
@@ -585,12 +585,12 @@ export default function Home() {
                       <div className="bg-gradient-to-r from-indigo-900/30 to-purple-900/30 rounded-xl p-4 border border-indigo-500/20">
                         <div className="text-2xl font-bold text-indigo-400 mb-1">
                           {userData.participations.length}
-                        </div>
-                        <p className="text-gray-300 text-sm font-medium">Recent Activities</p>
+            </div>
+                        <p className="text-gray-300 text-sm font-medium">Total Participations</p>
                         <p className="text-gray-400 text-xs mt-1">
-                          Number of participation records
+                          Number of casts you've participated in
                         </p>
-                      </div>
+        </div>
 
                       {/* Status Summary */}
                       <div className="bg-gradient-to-r from-gray-900/30 to-gray-800/30 rounded-xl p-4 border border-gray-500/20">
@@ -763,9 +763,9 @@ export default function Home() {
                         >
                           {isApprovePending ? 'Confirming...' : isApproveConfirming ? 'Processing...' : 'Approve USDC'}
                         </button>
-                      </div>
-                    </div>
-
+                </div>
+              </div>
+              
 
                   </div>
 
@@ -809,10 +809,147 @@ export default function Home() {
                       </div>
                     </div>
                   )}
-                </div>
-              )}
+                                 </div>
+               )}
 
-              {/* Data Context Explanation */}
+               {/* Participation History Section - Only show when connected */}
+               {isConnected && address && userData && userData.participations.length > 0 && (
+                 <div>
+                   <h3 className="text-xl font-bold text-white mb-4 flex items-center">
+                     <span className="bg-indigo-600 text-white px-2 py-1 rounded text-sm mr-3">History</span>
+                     Your Participation History
+                   </h3>
+                   <div className="bg-gray-700/50 rounded-xl p-6 border border-gray-600/20">
+                     <div className="space-y-4">
+                       {userData.participations.map((participation, index) => (
+                         <div key={index} className="bg-gray-800/50 rounded-lg p-4 border border-gray-600/20">
+                           <div className="flex justify-between items-start mb-3">
+                             <div className="flex items-center gap-3">
+                               <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center">
+                                 <span className="text-white text-sm font-bold">#{index + 1}</span>
+                </div>
+                <div>
+                                 <h4 className="text-white font-semibold">Cast Participation</h4>
+                                 <p className="text-gray-400 text-sm">Week {participation.weekNumber}</p>
+                               </div>
+                             </div>
+                             <div className="text-right">
+                               <div className="text-lg font-bold text-indigo-400">
+                                 {participation.usdcAmount} USDC
+                               </div>
+                               <div className="text-xs text-gray-400 mb-2">
+                                 {participation.isEvaluated ? 'Evaluated' : 'Pending Evaluation'}
+                               </div>
+                               <a
+                                 href={`https://farcaster.xyz/v/${participation.castHash}`}
+                                 target="_blank"
+                                 rel="noopener noreferrer"
+                                 className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded-lg transition-colors"
+                                 title="View this cast on Farcaster"
+                               >
+                                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                   <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+                                   <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+                                 </svg>
+                                 View Cast
+                               </a>
+                </div>
+              </div>
+              
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                             <div>
+                               <p className="text-gray-400 mb-1">Cast Hash:</p>
+                               <div className="flex items-center gap-2">
+                                 <p className="text-white font-mono text-xs break-all">
+                                   {participation.castHash}
+                                 </p>
+                                 <a
+                                   href={`https://farcaster.xyz/v/${participation.castHash}`}
+                                   target="_blank"
+                                   rel="noopener noreferrer"
+                                   className="text-indigo-400 hover:text-indigo-300 transition-colors"
+                                   title="View on Farcaster"
+                                 >
+                                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                     <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+                                     <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+                                   </svg>
+                                 </a>
+                               </div>
+                               <p className="text-gray-500 text-xs mt-1">
+                                 Click the link icon or "View Cast" button to see this cast on Farcaster
+                               </p>
+                             </div>
+                             <div>
+                               <p className="text-gray-400 mb-1">User Address:</p>
+                               <p className="text-white font-mono text-xs break-all">
+                                 {participation.user}
+                               </p>
+                             </div>
+                             <div>
+                               <p className="text-gray-400 mb-1">Timestamp:</p>
+                               <p className="text-white">
+                                 {new Date(participation.timestamp * 1000).toLocaleString()}
+                               </p>
+                </div>
+                <div>
+                               <p className="text-gray-400 mb-1">Status:</p>
+                               <div className="flex items-center gap-2">
+                                 <div className={`w-2 h-2 rounded-full ${
+                                   participation.isEvaluated ? 'bg-green-500' : 'bg-yellow-500'
+                                 }`}></div>
+                                 <span className="text-white">
+                                   {participation.isEvaluated ? 'Evaluated' : 'Pending Evaluation'}
+                                 </span>
+                               </div>
+                </div>
+              </div>
+              
+                           {participation.isEvaluated && (
+                             <div className="mt-3 p-3 bg-green-900/20 border border-green-500/20 rounded-lg">
+                               <div className="flex items-center gap-2">
+                                 <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                 </svg>
+                                 <span className="text-green-300 text-sm font-medium">
+                                   This cast has been evaluated by the admin
+                                 </span>
+                               </div>
+                             </div>
+                           )}
+                         </div>
+                       ))}
+                     </div>
+                     
+                     {/* Summary Statistics */}
+                     <div className="mt-6 p-4 bg-gray-800/30 rounded-lg border border-gray-600/20">
+                       <h4 className="text-white font-semibold mb-3">Participation Summary</h4>
+                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                         <div>
+                           <p className="text-gray-400">Total Spent:</p>
+                           <p className="text-white font-semibold">
+                             {(userData.participations.reduce((sum, p) => sum + parseFloat(p.usdcAmount), 0)).toFixed(2)} USDC
+                           </p>
+                         </div>
+                         <div>
+                           <p className="text-gray-400">Average per Cast:</p>
+                           <p className="text-white font-semibold">
+                             {(userData.participations.reduce((sum, p) => sum + parseFloat(p.usdcAmount), 0) / userData.participations.length).toFixed(2)} USDC
+                           </p>
+                         </div>
+                         <div>
+                           <p className="text-gray-400">Evaluated Casts:</p>
+                           <p className="text-white font-semibold">
+                             {userData.participations.filter(p => p.isEvaluated).length} / {userData.participations.length}
+                           </p>
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               )}
+
+               {/* Data Context Explanation */}
               <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600/20">
                 <h4 className="font-semibold text-white mb-3">📋 Data Context & Explanation</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -828,8 +965,8 @@ export default function Home() {
                       <li>• <strong>Total Prize Pool:</strong> All-time cumulative</li>
                       <li>• <strong>Current Winner:</strong> Selected by admin</li>
                     </ul>
-                  </div>
-                  <div>
+                </div>
+                <div>
                     <h5 className="font-medium text-green-400 mb-2">getUserData() - Personal Data</h5>
                     <ul className="text-gray-300 space-y-1">
                       <li>• <strong>Contract Balance:</strong> Your USDC in contract</li>
@@ -846,8 +983,8 @@ export default function Home() {
               </div>
             </div>
           )}
-        </div>
-
+          </div>
+          
         {/* Connect Wallet Prompt - Only show when not connected */}
         {!isConnected && (
           /* Connect Wallet Prompt */

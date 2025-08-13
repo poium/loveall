@@ -515,7 +515,8 @@ async function recordParticipation(userAddress: string, castHash: string): Promi
         
         // Call the participateInCast function
         console.log('Calling participateInCast function...');
-        // Convert castHash to bytes32 format
+        // For contract storage, we need a bytes32 hash
+        // We'll use keccak256 of the original cast hash to create a unique 32-byte identifier
         const castHashBytes32 = ethers.keccak256(ethers.toUtf8Bytes(castHash));
         const tx = await contractWithSigner.participateInCast(userAddress, castHashBytes32);
         console.log('Transaction sent:', tx.hash);
