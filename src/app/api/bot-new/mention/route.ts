@@ -565,7 +565,12 @@ export async function POST(request: NextRequest) {
                         );
                         
                         if (hasBalanceNoAllowance) {
-                            insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need to approve the contract to spend your USDC. You have USDC in some wallets but haven't approved the contract. Please visit our website to approve and try again! 💫`;
+                            // Show wallets that have USDC but need approval
+                            const walletsNeedingApproval = balanceCheck.allAddresses
+                                .filter(addr => parseFloat(addr.balance) > 0 && !addr.hasAllowance)
+                                .map(addr => `${shortenAddress(addr.address)} (${addr.balance} USDC)`)
+                                .join(', ');
+                            insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need to approve the contract to spend your USDC. Your wallets with USDC: ${walletsNeedingApproval}. Please visit our website to approve and try again! 💫`;
                         } else {
                             // Show all wallet addresses in shortened format
                             const shortAddresses = balanceCheck.allAddresses.map(addr => 
