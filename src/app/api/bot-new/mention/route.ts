@@ -21,9 +21,11 @@ const CAST_COST = ethers.parseUnits('0.01', 6); // 1 cent USDC (6 decimals)
 // Contract ABI (simplified for the functions we need)
 const CONTRACT_ABI = [
     'function getUserData(address user) external view returns (uint256 balance, uint256 totalCasts, uint256 lastCastTime, bool isActive)',
-    'function participateInCast(address user, string memory castHash) external returns (bool)',
+    'function participateInCast(address user, bytes32 castHash) external',
     'function getCommonData() external view returns (uint256 currentWeek, uint256 currentPrizePool, uint256 totalParticipants, uint256 weekStartTime)',
-    'function owner() external view returns (address)'
+    'function owner() external view returns (address)',
+    'function getBalance(address user) external view returns (uint256)',
+    'function hasParticipatedThisWeek(address user) external view returns (bool)'
 ];
 
 // USDC ABI (simplified)
@@ -62,7 +64,7 @@ function switchRpcEndpoint(): ethers.JsonRpcProvider {
 provider = createProvider();
 
 // Initialize contract instances
-const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+let contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
 let usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider);
 
 // Track processed casts to prevent duplicate replies
@@ -354,35 +356,35 @@ function getUserVerifiedAddress(castData: any): string | null {
     return addresses.length > 0 ? addresses[0] : null;
 }
 
-// Check user's USDC balance and contract allowance for a single address
-async function checkSingleAddressBalance(userAddress: string): Promise<{ hasBalance: boolean; balance: string; hasAllowance: boolean; allowance: string; error?: string }> {
+// Check user's contract balance for a single address
+async function checkSingleAddressBalance(userAddress: string): Promise<{ hasBalance: boolean; balance: string; hasParticipated: boolean; error?: string }> {
     try {
-        console.log('Checking balance for address:', userAddress);
+        console.log('Checking contract balance for address:', userAddress);
         
-        // Check USDC balance with RPC fallback
-        let usdcBalance = ethers.parseUnits('0', 6);
+        // Check contract balance with RPC fallback
+        let contractBalance = ethers.parseUnits('0', 6);
         let balanceFormatted = '0';
         
         for (let attempt = 1; attempt <= 3; attempt++) {
             try {
-                usdcBalance = await usdcContract.balanceOf(userAddress);
-                balanceFormatted = ethers.formatUnits(usdcBalance, 6);
-                console.log('USDC balance:', balanceFormatted);
+                contractBalance = await contract.getBalance(userAddress);
+                balanceFormatted = ethers.formatUnits(contractBalance, 6);
+                console.log('Contract balance:', balanceFormatted);
                 break;
             } catch (balanceError: any) {
-                console.log(`Balance check failed (attempt ${attempt}) for address:`, userAddress, 'Error:', balanceError);
+                console.log(`Contract balance check failed (attempt ${attempt}) for address:`, userAddress, 'Error:', balanceError);
                 
                 if (attempt === 2) {
                     // Switch RPC endpoint on 2nd attempt
-                    console.log('Switching RPC endpoint for balance check...');
+                    console.log('Switching RPC endpoint for contract balance check...');
                     provider = switchRpcEndpoint();
-                    usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider);
+                    contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
                 }
                 
                 if (attempt === 3) {
                     // Final attempt failed, assume 0 balance
-                    console.log('All balance check attempts failed - assuming 0 balance');
-                    usdcBalance = ethers.parseUnits('0', 6);
+                    console.log('All contract balance check attempts failed - assuming 0 balance');
+                    contractBalance = ethers.parseUnits('0', 6);
                     balanceFormatted = '0';
                 } else {
                     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -390,63 +392,50 @@ async function checkSingleAddressBalance(userAddress: string): Promise<{ hasBala
             }
         }
         
-        // Check allowance for the contract with retry
-        let allowance = ethers.parseUnits('0', 6);
-        let hasAllowance = false;
-        let allowanceCheckSuccess = false;
-        
-        // Try allowance check with RPC fallback
-        for (let attempt = 1; attempt <= 6; attempt++) {
+        // Check if user has already participated this week
+        let hasParticipated = false;
+        for (let attempt = 1; attempt <= 3; attempt++) {
             try {
-                allowance = await usdcContract.allowance(userAddress, CONTRACT_ADDRESS);
-                hasAllowance = allowance >= CAST_COST;
-                allowanceCheckSuccess = true;
-                console.log(`Allowance check successful (attempt ${attempt}):`, ethers.formatUnits(allowance, 6), 'USDC, Required:', ethers.formatUnits(CAST_COST, 6), 'USDC');
+                hasParticipated = await contract.hasParticipatedThisWeek(userAddress);
+                console.log('Has participated this week:', hasParticipated);
                 break;
-            } catch (allowanceError: any) {
-                console.log(`Allowance check failed (attempt ${attempt}) for address:`, userAddress, 'Error:', allowanceError);
+            } catch (participationError: any) {
+                console.log(`Participation check failed (attempt ${attempt}) for address:`, userAddress, 'Error:', participationError);
                 
-                if (attempt % 2 === 0) {
-                    // Every 2nd attempt, switch RPC endpoint
-                    console.log('Switching RPC endpoint due to failure...');
+                if (attempt === 2) {
+                    console.log('Switching RPC endpoint for participation check...');
                     provider = switchRpcEndpoint();
-                    // Recreate contract instances with new provider
-                    usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider);
+                    contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
                 }
                 
-                if (attempt === 6) {
-                    // Final attempt failed, treat as no allowance
-                    console.log('All allowance check attempts failed - treating as no allowance for safety');
-                    hasAllowance = false;
-                    allowance = ethers.parseUnits('0', 6);
+                if (attempt === 3) {
+                    console.log('All participation check attempts failed - assuming not participated');
+                    hasParticipated = false;
                 } else {
-                    // Wait a bit before retrying
                     await new Promise(resolve => setTimeout(resolve, 1000));
                 }
             }
         }
         
-        // Check if user has enough balance and allowance
-        const hasBalance = usdcBalance >= CAST_COST && hasAllowance;
+        // Check if user has enough balance and hasn't participated this week
+        const hasBalance = contractBalance >= CAST_COST && !hasParticipated;
         
         console.log('Final check for address:', userAddress);
-        console.log('- Balance:', balanceFormatted, 'USDC (>=', ethers.formatUnits(CAST_COST, 6), 'USDC):', usdcBalance >= CAST_COST);
-        console.log('- Allowance:', ethers.formatUnits(allowance, 6), 'USDC (>=', ethers.formatUnits(CAST_COST, 6), 'USDC):', hasAllowance);
+        console.log('- Contract Balance:', balanceFormatted, 'USDC (>=', ethers.formatUnits(CAST_COST, 6), 'USDC):', contractBalance >= CAST_COST);
+        console.log('- Has participated this week:', hasParticipated);
         console.log('- Can participate:', hasBalance);
         
         return {
             hasBalance,
             balance: balanceFormatted,
-            hasAllowance,
-            allowance: ethers.formatUnits(allowance, 6)
+            hasParticipated
         };
     } catch (error) {
-        console.error('Error checking user balance:', error);
+        console.error('Error checking user contract balance:', error);
         return {
             hasBalance: false,
             balance: '0',
-            hasAllowance: false,
-            allowance: '0',
+            hasParticipated: false,
             error: error instanceof Error ? error.message : 'Unknown error'
         };
     }
@@ -457,7 +446,7 @@ async function checkUserBalance(userAddresses: string[]): Promise<{
     hasBalance: boolean; 
     balance: string; 
     bestAddress: string | null;
-    allAddresses: Array<{address: string, balance: string, hasBalance: boolean, hasAllowance: boolean, allowance: string}>;
+    allAddresses: Array<{address: string, balance: string, hasBalance: boolean, hasParticipated: boolean}>;
     error?: string 
 }> {
     try {
@@ -474,8 +463,7 @@ async function checkUserBalance(userAddresses: string[]): Promise<{
                 address,
                 balance: result.balance,
                 hasBalance: result.hasBalance,
-                hasAllowance: result.hasAllowance,
-                allowance: result.allowance
+                hasParticipated: result.hasParticipated
             });
             
             // Track the best address (first one with sufficient balance)
@@ -504,16 +492,44 @@ async function checkUserBalance(userAddresses: string[]): Promise<{
 }
 
 // Record participation in the smart contract
-async function recordParticipation(userAddress: string, castHash: string): Promise<{ success: boolean; error?: string }> {
+async function recordParticipation(userAddress: string, castHash: string): Promise<{ success: boolean; error?: string; txHash?: string }> {
     try {
         console.log('Recording participation for user:', userAddress, 'cast:', castHash);
         
-        // Note: This would require a private key to sign transactions
-        // For now, we'll just log the participation
-        // In production, you'd need a bot wallet to call this function
+        // Check if we have the bot's private key
+        const botPrivateKey = process.env.PRIVATE_KEY;
+        if (!botPrivateKey) {
+            console.error('PRIVATE_KEY not found in environment variables');
+            return {
+                success: false,
+                error: 'Bot private key not configured'
+            };
+        }
+        
+        // Create bot wallet
+        const botWallet = new ethers.Wallet(botPrivateKey, provider);
+        console.log('Bot wallet address:', botWallet.address);
+        
+        // Create contract instance with bot wallet
+        const contractWithSigner = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, botWallet);
+        
+        // Call the participateInCast function
+        console.log('Calling participateInCast function...');
+        // Convert castHash to bytes32 format
+        const castHashBytes32 = ethers.keccak256(ethers.toUtf8Bytes(castHash));
+        const tx = await contractWithSigner.participateInCast(userAddress, castHashBytes32);
+        console.log('Transaction sent:', tx.hash);
+        
+        // Wait for transaction confirmation
+        console.log('Waiting for transaction confirmation...');
+        const receipt = await tx.wait();
+        console.log('Transaction confirmed:', receipt.hash);
         
         console.log('Participation recorded successfully');
-        return { success: true };
+        return { 
+            success: true, 
+            txHash: receipt.hash 
+        };
     } catch (error) {
         console.error('Error recording participation:', error);
         return {
@@ -634,30 +650,23 @@ export async function POST(request: NextRequest) {
                     let insufficientBalanceResponse;
                     if (walletCount === 1) {
                         const shortAddress = shortenAddress(firstWallet.address);
-                        if (parseFloat(firstWallet.balance) > 0 && !firstWallet.hasAllowance) {
-                            insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need to approve the contract to spend your USDC. You have ${firstWallet.balance} USDC in wallet ${shortAddress}. Please approve the contract on our website and try again! 💫`;
+                        if (firstWallet.hasParticipated) {
+                            insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you've already participated this week! You have ${firstWallet.balance} USDC in your contract balance. Come back next week for another chance! 💫`;
                         } else {
-                            insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your wallet to participate. You currently have ${firstWallet.balance} USDC in wallet ${shortAddress}. Please top up this wallet and try again! 💫`;
+                            insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your contract balance to participate. You currently have ${firstWallet.balance} USDC. Please top up your contract balance on our website and try again! 💫`;
                         }
                     } else {
-                        // Check if any wallet has balance but no allowance
-                        const hasBalanceNoAllowance = balanceCheck.allAddresses.some(addr => 
-                            parseFloat(addr.balance) > 0 && !addr.hasAllowance
-                        );
+                        // Check if any wallet has already participated
+                        const hasParticipated = balanceCheck.allAddresses.some(addr => addr.hasParticipated);
                         
-                        if (hasBalanceNoAllowance) {
-                            // Show wallets that have USDC but need approval
-                            const walletsNeedingApproval = balanceCheck.allAddresses
-                                .filter(addr => parseFloat(addr.balance) > 0 && !addr.hasAllowance)
-                                .map(addr => `${shortenAddress(addr.address)} (${addr.balance} USDC)`)
-                                .join(', ');
-                            insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need to approve the contract to spend your USDC. Your wallets with USDC: ${walletsNeedingApproval}. Please visit our website to approve and try again! 💫`;
+                        if (hasParticipated) {
+                            insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you've already participated this week! Please come back next week for another chance! 💫`;
                         } else {
                             // Show all wallet addresses in shortened format
                             const shortAddresses = balanceCheck.allAddresses.map(addr => 
                                 `${shortenAddress(addr.address)} (${addr.balance} USDC)`
                             ).join(', ');
-                            insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your wallet to participate. Your wallets: ${shortAddresses}. Please top up any of these wallets and try again! 💫`;
+                            insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your contract balance to participate. Your contract balances: ${shortAddresses}. Please top up your contract balance on our website and try again! 💫`;
                         }
                     }
                     
