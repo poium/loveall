@@ -47,6 +47,7 @@ async function postReplyToFarcaster(castHash: string, replyText: string) {
     try {
         console.log('Posting reply to cast:', castHash);
         console.log('Reply text:', replyText);
+        console.log('Signer UUID:', process.env.NEYNAR_SIGNER_UUID);
         
         const reply = await neynar.publishCast(
             process.env.NEYNAR_SIGNER_UUID!,
@@ -60,6 +61,7 @@ async function postReplyToFarcaster(castHash: string, replyText: string) {
         return reply;
     } catch (error) {
         console.error('Error posting reply:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
         throw error;
     }
 }
