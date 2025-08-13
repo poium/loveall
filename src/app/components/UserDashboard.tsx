@@ -74,17 +74,23 @@ export default function UserDashboard() {
       usdcAddress: USDC_ADDRESS
     });
     
+    // Check if writeContract is available
+    if (!writeContract) {
+      console.error('writeContract is not available');
+      return;
+    }
+    
     // Approve 100 USDC (enough for many casts)
     const amount = parseUnits('100', 6); // USDC has 6 decimals
     
     try {
-      writeContract({
+      const result = writeContract({
         address: USDC_ADDRESS as `0x${string}`,
         abi: USDC_ABI,
         functionName: 'approve',
         args: [CONTRACT_ADDRESS as `0x${string}`, amount],
       });
-      console.log('Write contract called successfully');
+      console.log('Write contract called successfully', result);
     } catch (error) {
       console.error('Error calling writeContract:', error);
     }
