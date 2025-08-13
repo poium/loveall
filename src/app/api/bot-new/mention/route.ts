@@ -60,35 +60,29 @@ Generate a response that feels natural and continues the conversation:`;
             interactionType
         });
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
-
         const response = await fetch('https://api.x.ai/v1/chat/completions', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${grokApiKey}`
             },
-            signal: controller.signal,
             body: JSON.stringify({
-                model: 'grok-4',
+                model: 'grok-3-mini',
                 messages: [
                     {
                         role: 'system',
-                        content: 'You are Loveall, a charming and witty Farcaster bot. Be conversational, contextually aware, and genuinely engaging. Reference what people say and ask follow-up questions.'
+                        content: 'You are Loveall, a charming and witty Farcaster bot. Be conversational, contextually aware, and genuinely engaging. Reference what people say and ask follow-up questions. Keep responses under 200 characters and use emojis naturally.'
                     },
                     {
                         role: 'user',
                         content: context
                     }
                 ],
-                max_tokens: 500,
+                max_tokens: 300,
                 temperature: 0.7,
                 stream: false
             })
         });
-
-        clearTimeout(timeoutId); // Clear the timeout
 
         if (!response.ok) {
             console.error('Grok API error:', response.status, response.statusText);
@@ -101,35 +95,10 @@ Generate a response that feels natural and continues the conversation:`;
         console.log('Grok API response data:', JSON.stringify(data, null, 2));
         
         const grokResponse = data.choices?.[0]?.message?.content?.trim();
-        const reasoningContent = data.choices?.[0]?.message?.reasoning_content;
         
         if (grokResponse) {
             console.log('Grok AI response:', grokResponse);
             return grokResponse;
-        } else if (reasoningContent && data.choices?.[0]?.finish_reason === 'length') {
-            // If we hit token limit but have reasoning, extract the response from reasoning
-            console.log('Token limit hit, extracting response from reasoning');
-            console.log('Reasoning content:', reasoningContent);
-            
-            // Try to extract the actual response from the reasoning
-            const lines = reasoningContent.split('\n');
-            const lastLine = lines[lines.length - 1];
-            
-            // If the last line looks like it's starting a response, use it
-            if (lastLine && lastLine.length > 10 && !lastLine.startsWith('-') && !lastLine.startsWith('The')) {
-                console.log('Extracted response from reasoning:', lastLine);
-                return lastLine;
-            }
-            
-            // Otherwise, create a simple response based on the context
-            const userMessage = cleanCastText.toLowerCase();
-            if (userMessage.includes('where are you from')) {
-                return "I'm from the digital realm of Farcaster! 🌐 Born in the cloud, raised on blockchain. Where's your favorite place to explore?";
-            } else if (userMessage.includes('hello') || userMessage.includes('hey') || userMessage.includes('hi')) {
-                return "Hey there! 😊 I'm Loveall, your flirty AI companion. What's got you in such a good mood today?";
-            } else {
-                return "Hey! 💫 I'm Loveall, and I'm absolutely delighted to meet you! What's on your mind?";
-            }
         } else {
             console.log('No valid response from Grok - bot will not respond');
             console.log('Response structure:', {
