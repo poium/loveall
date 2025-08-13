@@ -21,11 +21,14 @@
   "dependencies": {
     "@neynar/nodejs-sdk": "^3.34.0",
     "@openzeppelin/contracts": "^5.4.0",
+    "@rainbow-me/rainbowkit": "^2.2.8",
     "dotenv": "^17.2.1",
     "ethers": "^6.15.0",
     "next": "15.4.6",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "viem": "^2.33.3",
+    "wagmi": "^2.16.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
