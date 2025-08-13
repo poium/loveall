@@ -32,12 +32,38 @@ const USDC_ABI = [
     'function allowance(address owner, address spender) external view returns (uint256)'
 ];
 
-// Initialize provider
-const provider = new ethers.JsonRpcProvider(process.env.BASE_RPC_URL || 'https://mainnet.base.org');
+// Initialize provider with fallback RPC endpoints
+const RPC_ENDPOINTS = [
+    process.env.BASE_RPC_URL || 'https://mainnet.base.org',
+    'https://base.blockpi.network/v1/rpc/public',
+    'https://1rpc.io/base',
+    'https://base.meowrpc.com',
+    'https://base.drpc.org'
+];
+
+let provider: ethers.JsonRpcProvider;
+
+// Function to create provider with fallback
+function createProvider(): ethers.JsonRpcProvider {
+    const rpcUrl = RPC_ENDPOINTS[0]; // Use primary RPC
+    console.log('Using RPC endpoint:', rpcUrl);
+    return new ethers.JsonRpcProvider(rpcUrl);
+}
+
+// Function to switch to next RPC endpoint
+let currentRpcIndex = 0;
+function switchRpcEndpoint(): ethers.JsonRpcProvider {
+    currentRpcIndex = (currentRpcIndex + 1) % RPC_ENDPOINTS.length;
+    const newRpcUrl = RPC_ENDPOINTS[currentRpcIndex];
+    console.log(`Switching RPC endpoint to: ${newRpcUrl}`);
+    return new ethers.JsonRpcProvider(newRpcUrl);
+}
+
+provider = createProvider();
 
 // Initialize contract instances
 const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
-const usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider);
+let usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider);
 
 // Track processed casts to prevent duplicate replies
 const processedCasts = new Set<string>();
@@ -333,18 +359,44 @@ async function checkSingleAddressBalance(userAddress: string): Promise<{ hasBala
     try {
         console.log('Checking balance for address:', userAddress);
         
-        // Check USDC balance
-        const usdcBalance = await usdcContract.balanceOf(userAddress);
-        const balanceFormatted = ethers.formatUnits(usdcBalance, 6);
-        console.log('USDC balance:', balanceFormatted);
+        // Check USDC balance with RPC fallback
+        let usdcBalance = ethers.parseUnits('0', 6);
+        let balanceFormatted = '0';
+        
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                usdcBalance = await usdcContract.balanceOf(userAddress);
+                balanceFormatted = ethers.formatUnits(usdcBalance, 6);
+                console.log('USDC balance:', balanceFormatted);
+                break;
+            } catch (balanceError: any) {
+                console.log(`Balance check failed (attempt ${attempt}) for address:`, userAddress, 'Error:', balanceError);
+                
+                if (attempt === 2) {
+                    // Switch RPC endpoint on 2nd attempt
+                    console.log('Switching RPC endpoint for balance check...');
+                    provider = switchRpcEndpoint();
+                    usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider);
+                }
+                
+                if (attempt === 3) {
+                    // Final attempt failed, assume 0 balance
+                    console.log('All balance check attempts failed - assuming 0 balance');
+                    usdcBalance = ethers.parseUnits('0', 6);
+                    balanceFormatted = '0';
+                } else {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
+        }
         
         // Check allowance for the contract with retry
         let allowance = ethers.parseUnits('0', 6);
         let hasAllowance = false;
         let allowanceCheckSuccess = false;
         
-        // Try allowance check up to 3 times
-        for (let attempt = 1; attempt <= 3; attempt++) {
+        // Try allowance check with RPC fallback
+        for (let attempt = 1; attempt <= 6; attempt++) {
             try {
                 allowance = await usdcContract.allowance(userAddress, CONTRACT_ADDRESS);
                 hasAllowance = allowance >= CAST_COST;
@@ -353,7 +405,16 @@ async function checkSingleAddressBalance(userAddress: string): Promise<{ hasBala
                 break;
             } catch (allowanceError: any) {
                 console.log(`Allowance check failed (attempt ${attempt}) for address:`, userAddress, 'Error:', allowanceError);
-                if (attempt === 3) {
+                
+                if (attempt % 2 === 0) {
+                    // Every 2nd attempt, switch RPC endpoint
+                    console.log('Switching RPC endpoint due to failure...');
+                    provider = switchRpcEndpoint();
+                    // Recreate contract instances with new provider
+                    usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider);
+                }
+                
+                if (attempt === 6) {
                     // Final attempt failed, treat as no allowance
                     console.log('All allowance check attempts failed - treating as no allowance for safety');
                     hasAllowance = false;
