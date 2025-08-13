@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
+import UserDashboard from './components/UserDashboard';
 
 interface PrizePoolData {
   currentWeek: number;
@@ -23,8 +24,24 @@ export default function Home() {
   const fetchPrizePoolData = async () => {
     try {
       setLoading(true);
-      // TODO: Replace with actual API call to smart contract
-      // For now, using mock data
+      const response = await fetch('/api/prize-pool');
+      if (response.ok) {
+        const data = await response.json();
+        setPrizePoolData(data);
+      } else {
+        console.error('Failed to fetch prize pool data');
+        // Fallback to mock data if API fails
+        const mockData: PrizePoolData = {
+          currentWeek: 1,
+          currentPrizePool: "0.00",
+          totalParticipants: 0,
+          weekStartTime: Date.now()
+        };
+        setPrizePoolData(mockData);
+      }
+    } catch (error) {
+      console.error('Error fetching prize pool data:', error);
+      // Fallback to mock data on error
       const mockData: PrizePoolData = {
         currentWeek: 1,
         currentPrizePool: "0.00",
@@ -32,8 +49,6 @@ export default function Home() {
         weekStartTime: Date.now()
       };
       setPrizePoolData(mockData);
-    } catch (error) {
-      console.error('Error fetching prize pool data:', error);
     } finally {
       setLoading(false);
     }
@@ -99,6 +114,9 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        {/* User Dashboard */}
+        <UserDashboard />
 
         {/* Prize Pool Card */}
         <div className="bg-white rounded-2xl shadow-xl p-8 mb-12">
