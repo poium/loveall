@@ -1,0 +1,127 @@
+
+
+I have a neynar and grok api 
+
+Develop a flirting bot named Loveall on Farcaster
+
+
+users can send a cast to the bot.
+bot will reply to the user with a cast.
+to qualify for flirt, user need to pay 1 USDC for each cast ( Need to  top up first).
+These 1 USDC will be pooled in the prize pool
+
+End of the week, Bot will choose one person as a winner based on the cast quality, charmness , witty etc..,
+
+winner gets 90% of the total amount prize pool.
+
+10% of the total amount prize pool will be pooled for next week round.upcoming round goes on.
+
+I want prize distribution to be done automatically
+
+
+
+----
+
+Technical Questions:
+Farcaster Integration:
+Do you want to use the Farcaster API directly or a specific SDK?
+I have a neynar API - so all the farcaster related things will be handled by neynar
+
+Should the bot run as a standalone service or integrate with an existing platform?
+Bot will run in the farcaster, User can tag @loveall. bot will reply to the users who have balance- if they dont hav ebalance it will day, no balance
+
+USDC Payment Integration:
+Which blockchain network should we use for USDC payments? (Ethereum, Polygon, Base, etc.)
+Base
+
+Do you have a preferred wallet integration method? (MetaMask, WalletConnect, etc.)
+rainbow wallet for connection
+
+Should we use a specific payment processor or smart contract for handling the 1 USDC payments?
+It will be in onchain.
+
+Prize Pool Management:
+Where should the prize pool be stored? (Smart contract, database, etc.)
+Smart contract
+
+How should we handle the automatic prize distribution? (Smart contract automation, scheduled tasks, etc.)
+Smart contract
+
+Cast Quality Assessment:
+How should the bot evaluate cast quality, charm, and wit?
+It will be handled by grok AI
+
+Should we use AI/ML models (like Grok) for this assessment?
+Yes, we deo have grok api
+
+What criteria should be used for selecting the winner?
+Grok will choose based on their own liking
+
+Infrastructure Questions:
+Deployment:
+Where do you want to deploy this bot? (Vercel, AWS, local server, etc.)
+We have vercel
+
+Do you need a database for storing user data, payment history, etc.?
+not neeceesary for now., willinclude if needed
+
+Authentication & Security:
+How should users authenticate with the bot?
+Why they need to authendicate - user directly interract with bot by mentioing @loveall and send the cast
+
+Business Logic Questions:
+
+Weekly Cycle:
+When does the weekly cycle start/end? (e.g., Wednesday 00:00 UTC to Tuesday 23:59 UTC)
+
+What happens if no one participates in a week?
+It will goes to next week automatically
+
+User Experience:
+Should users be able to see the current prize pool amount?
+yes,
+
+Should there be a leaderboard or way to see past winners?
+
+not now
+How should the bot handle invalid or inappropriate casts?
+it can respond accoringly since it is a bot
+
+Please let me know your preferences for these questions, and I'll help you build this step by step!
+
+
+---
+
+Smart Contract Details: 
+Do you have a specific smart contract in mind for the prize pool, or should we create one?
+We need to create one - which needs to manage all possible aspects
+
+Balance Checking: How should the bot check if a user has sufficient USDC balance? 
+Through the smart contract or a separate balance tracking system?
+
+Everything needs to be in smart contrat
+
+Weekly Timing: You mentioned Wednesday 00:00 UTC to Tuesday 23:59 UTC - is this confirmed?
+Yes
+
+Grok API Integration: Do you have the Grok API credentials ready, or should I prepare the integration structure?
+Yes, we have grok API ready and neynar API for bot
+
+Prize Pool Display: How should users see the current prize pool amount? Through a specific command or in bot responses?
+
+We can make it display in the website and also in the bot reponse.
+
+---
+
+Questions for You:
+Should the winner selection be done by the admin (you) manually, or do you want an automated system?
+grok will select based on which users cast it likes most.
+
+Do you want users to be able to withdraw their unused balance anytime?
+Yes,
+
+Should there be a minimum participation requirement per week?
+no
+
+Do you want to track participation history on-chain or off-chain?
+What does it mean?

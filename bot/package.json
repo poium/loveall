@@ -1,0 +1,29 @@
+{
+  "name": "loveall-bot",
+  "version": "1.0.0",
+  "description": "Loveall flirting bot for Farcaster",
+  "main": "loveall-bot.js",
+  "scripts": {
+    "start": "node loveall-bot.js",
+    "dev": "nodemon loveall-bot.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@neynar/nodejs-sdk": "^3.34.0",
+    "dotenv": "^17.2.1",
+    "ethers": "^6.0.0",
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  },
+  "keywords": [
+    "farcaster",
+    "bot",
+    "neynar",
+    "ethereum",
+    "base"
+  ],
+  "author": "Loveall Team",
+  "license": "MIT"
+}

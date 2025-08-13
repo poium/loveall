@@ -1,0 +1,41 @@
+{
+  "name": "loveall",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:base": "hardhat run scripts/deploy.cjs --network base",
+    "deploy:baseSepolia": "hardhat run scripts/deploy.cjs --network baseSepolia",
+    "deploy:local": "hardhat run scripts/deploy.ts --network hardhat",
+    "verify:base": "hardhat run scripts/verify.cjs --network base"
+  },
+  "dependencies": {
+    "@neynar/nodejs-sdk": "^3.34.0",
+    "@openzeppelin/contracts": "^5.4.0",
+    "dotenv": "^17.2.1",
+    "ethers": "^6.15.0",
+    "next": "15.4.6",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
+    "@nomicfoundation/hardhat-verify": "^2.1.1",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.4.6",
+    "hardhat": "^2.26.3",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
