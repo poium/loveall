@@ -68,7 +68,7 @@ Generate a response that feels natural and continues the conversation:`;
                 'X-Groq-Provider': 'x-ai'
             },
             body: JSON.stringify({
-                model: 'grok-3-mini',
+                model: 'grok-beta',
                 messages: [
                     {
                         role: 'system',
@@ -92,6 +92,8 @@ Generate a response that feels natural and continues the conversation:`;
         }
 
         const data = await response.json();
+        console.log('Grok API response data:', JSON.stringify(data, null, 2));
+        
         const grokResponse = data.choices?.[0]?.message?.content?.trim();
         
         if (grokResponse) {
@@ -99,6 +101,13 @@ Generate a response that feels natural and continues the conversation:`;
             return grokResponse;
         } else {
             console.log('No valid response from Grok - bot will not respond');
+            console.log('Response structure:', {
+                choices: data.choices,
+                hasChoices: !!data.choices,
+                choicesLength: data.choices?.length,
+                firstChoice: data.choices?.[0],
+                message: data.choices?.[0]?.message
+            });
             return null; // No fallback, just return null
         }
 
