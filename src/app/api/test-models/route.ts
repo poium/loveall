@@ -12,6 +12,8 @@ export async function GET() {
 
         // Test different model names to see what's available
         const modelsToTest = [
+            'grok-3-mini',
+            'grok-3',
             'grok-beta',
             'grok',
             'grok-2',

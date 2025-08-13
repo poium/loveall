@@ -68,7 +68,7 @@ Generate a response that feels natural and continues the conversation:`;
                 'X-Groq-Provider': 'x-ai'
             },
             body: JSON.stringify({
-                model: 'grok-beta',
+                model: 'grok-3-mini',
                 messages: [
                     {
                         role: 'system',
