@@ -329,30 +329,43 @@ function getUserVerifiedAddress(castData: any): string | null {
 }
 
 // Check user's USDC balance and contract allowance for a single address
-async function checkSingleAddressBalance(userAddress: string): Promise<{ hasBalance: boolean; balance: string; error?: string }> {
+async function checkSingleAddressBalance(userAddress: string): Promise<{ hasBalance: boolean; balance: string; hasAllowance: boolean; allowance: string; error?: string }> {
     try {
         console.log('Checking balance for address:', userAddress);
         
         // Check USDC balance
         const usdcBalance = await usdcContract.balanceOf(userAddress);
-        console.log('USDC balance:', ethers.formatUnits(usdcBalance, 6));
+        const balanceFormatted = ethers.formatUnits(usdcBalance, 6);
+        console.log('USDC balance:', balanceFormatted);
         
         // Check allowance for the contract
-        const allowance = await usdcContract.allowance(userAddress, CONTRACT_ADDRESS);
-        console.log('Contract allowance:', ethers.formatUnits(allowance, 6));
+        let allowance = ethers.parseUnits('0', 6);
+        let hasAllowance = false;
+        try {
+            allowance = await usdcContract.allowance(userAddress, CONTRACT_ADDRESS);
+            hasAllowance = allowance >= CAST_COST;
+            console.log('Contract allowance:', ethers.formatUnits(allowance, 6));
+        } catch (allowanceError) {
+            console.log('Allowance check failed (likely no approval):', allowanceError);
+            hasAllowance = false;
+        }
         
         // Check if user has enough balance and allowance
-        const hasBalance = usdcBalance >= CAST_COST && allowance >= CAST_COST;
+        const hasBalance = usdcBalance >= CAST_COST && hasAllowance;
         
         return {
             hasBalance,
-            balance: ethers.formatUnits(usdcBalance, 6)
+            balance: balanceFormatted,
+            hasAllowance,
+            allowance: ethers.formatUnits(allowance, 6)
         };
     } catch (error) {
         console.error('Error checking user balance:', error);
         return {
             hasBalance: false,
             balance: '0',
+            hasAllowance: false,
+            allowance: '0',
             error: error instanceof Error ? error.message : 'Unknown error'
         };
     }
@@ -363,7 +376,7 @@ async function checkUserBalance(userAddresses: string[]): Promise<{
     hasBalance: boolean; 
     balance: string; 
     bestAddress: string | null;
-    allAddresses: Array<{address: string, balance: string, hasBalance: boolean}>;
+    allAddresses: Array<{address: string, balance: string, hasBalance: boolean, hasAllowance: boolean, allowance: string}>;
     error?: string 
 }> {
     try {
@@ -379,7 +392,9 @@ async function checkUserBalance(userAddresses: string[]): Promise<{
             addressResults.push({
                 address,
                 balance: result.balance,
-                hasBalance: result.hasBalance
+                hasBalance: result.hasBalance,
+                hasAllowance: result.hasAllowance,
+                allowance: result.allowance
             });
             
             // Track the best address (first one with sufficient balance)
@@ -526,7 +541,7 @@ export async function POST(request: NextRequest) {
                 if (!balanceCheck.hasBalance) {
                     console.log('User has insufficient balance in all wallets');
                     
-                    // Create a message showing shortened wallet addresses
+                    // Create a message showing shortened wallet addresses with allowance info
                     const firstWallet = balanceCheck.allAddresses[0];
                     const walletCount = balanceCheck.allAddresses.length;
                     
@@ -538,13 +553,26 @@ export async function POST(request: NextRequest) {
                     let insufficientBalanceResponse;
                     if (walletCount === 1) {
                         const shortAddress = shortenAddress(firstWallet.address);
-                        insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your wallet to participate. You currently have ${firstWallet.balance} USDC in wallet ${shortAddress}. Please top up this wallet and try again! 💫`;
+                        if (parseFloat(firstWallet.balance) > 0 && !firstWallet.hasAllowance) {
+                            insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need to approve the contract to spend your USDC. You have ${firstWallet.balance} USDC in wallet ${shortAddress}. Please approve the contract on our website and try again! 💫`;
+                        } else {
+                            insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your wallet to participate. You currently have ${firstWallet.balance} USDC in wallet ${shortAddress}. Please top up this wallet and try again! 💫`;
+                        }
                     } else {
-                        // Show all wallet addresses in shortened format
-                        const shortAddresses = balanceCheck.allAddresses.map(addr => 
-                            `${shortenAddress(addr.address)} (${addr.balance} USDC)`
-                        ).join(', ');
-                        insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your wallet to participate. Your wallets: ${shortAddresses}. Please top up any of these wallets and try again! 💫`;
+                        // Check if any wallet has balance but no allowance
+                        const hasBalanceNoAllowance = balanceCheck.allAddresses.some(addr => 
+                            parseFloat(addr.balance) > 0 && !addr.hasAllowance
+                        );
+                        
+                        if (hasBalanceNoAllowance) {
+                            insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need to approve the contract to spend your USDC. You have USDC in some wallets but haven't approved the contract. Please visit our website to approve and try again! 💫`;
+                        } else {
+                            // Show all wallet addresses in shortened format
+                            const shortAddresses = balanceCheck.allAddresses.map(addr => 
+                                `${shortenAddress(addr.address)} (${addr.balance} USDC)`
+                            ).join(', ');
+                            insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your wallet to participate. Your wallets: ${shortAddresses}. Please top up any of these wallets and try again! 💫`;
+                        }
                     }
                     
                     try {
