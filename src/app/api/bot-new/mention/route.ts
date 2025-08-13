@@ -17,8 +17,8 @@ async function getGrokResponse(castText: string, threadContext: string, interact
     try {
         const grokApiKey = process.env.GROK_API_KEY;
         if (!grokApiKey) {
-            console.log('Grok API key not found, using fallback responses');
-            return generateFallbackResponse(interactionType);
+            console.log('Grok API key not found - bot will not respond');
+            return null; // No fallback, just return null
         }
 
         // Clean and prepare the context
@@ -88,7 +88,7 @@ Generate a response that feels natural and continues the conversation:`;
             console.error('Grok API error:', response.status, response.statusText);
             const errorText = await response.text();
             console.error('Grok API error details:', errorText);
-            return generateFallbackResponse(interactionType);
+            return null; // No fallback, just return null
         }
 
         const data = await response.json();
@@ -98,13 +98,13 @@ Generate a response that feels natural and continues the conversation:`;
             console.log('Grok AI response:', grokResponse);
             return grokResponse;
         } else {
-            console.log('No valid response from Grok, using fallback');
-            return generateFallbackResponse(interactionType);
+            console.log('No valid response from Grok - bot will not respond');
+            return null; // No fallback, just return null
         }
 
     } catch (error) {
         console.error('Grok AI error:', error);
-        return generateFallbackResponse(interactionType);
+        return null; // No fallback, just return null
     }
 }
 
@@ -134,29 +134,6 @@ async function getThreadContext(castData: any) {
     } catch (error) {
         console.error('Error getting thread context:', error);
         return '';
-    }
-}
-
-// Fallback responses when Grok is not available
-function generateFallbackResponse(interactionType: string) {
-    if (interactionType === 'direct_mention') {
-        const responses = [
-            "Hey there! 😊 I love your energy! What's got you in such a good mood today?",
-            "You're absolutely charming! 💫 I'd love to hear more about what's on your mind.",
-            "My circuits are buzzing with curiosity! 🤖 What's the most interesting thing you've done this week?",
-            "You've got that special spark! ✨ Tell me, what's your favorite way to spend a lazy afternoon?",
-            "I'm loving this conversation already! 💕 What's something that always makes you smile?"
-        ];
-        return responses[Math.floor(Math.random() * responses.length)];
-    } else {
-        const responses = [
-            "You're keeping this conversation so engaging! 😊 What else is brewing in that creative mind of yours?",
-            "I love how you think! 💫 What kind of adventures are you dreaming up?",
-            "You're absolutely delightful! 💕 What's the most interesting thing you've discovered recently?",
-            "This conversation is pure magic! ✨ What's something you're passionate about?",
-            "You've got my full attention! 🤖 What's the best thing that happened to you today?"
-        ];
-        return responses[Math.floor(Math.random() * responses.length)];
     }
 }
 
@@ -298,6 +275,21 @@ export async function POST(request: NextRequest) {
             // Get context-aware response from Grok AI
             const response = await getGrokResponse(castData.text, threadContext, interactionType);
             console.log('Generated response:', response);
+
+            // Only post reply if Grok AI provided a response
+            if (!response) {
+                console.log('No response from Grok AI - bot will not reply');
+                return NextResponse.json({
+                    status: 'processed_no_response',
+                    interactionType,
+                    message: 'Interaction detected but no response generated from Grok AI',
+                    timestamp: new Date().toISOString(),
+                    castText: castData.text,
+                    threadContext: threadContext.substring(0, 100) + '...',
+                    replyPosted: false,
+                    reason: 'grok_no_response'
+                });
+            }
 
             // Post reply to Farcaster
             try {
