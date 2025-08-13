@@ -116,12 +116,14 @@ export async function GET(request: NextRequest) {
             }
         }
 
-        // Get common data with retry
+        // Get common data with retry (optimized - single RPC call)
         let commonData = {
             currentWeek: 0,
             currentPrizePool: '0',
             totalParticipants: 0,
-            weekStartTime: 0
+            weekStartTime: 0,
+            rolloverAmount: '0',
+            totalPrizePool: '0'
         };
 
         for (let attempt = 1; attempt <= 3; attempt++) {
@@ -131,7 +133,9 @@ export async function GET(request: NextRequest) {
                     currentWeek: Number(data.currentWeek),
                     currentPrizePool: ethers.formatUnits(data.currentWeekPrizePool, 6),
                     totalParticipants: Number(data.currentWeekParticipantsCount),
-                    weekStartTime: Number(data.weekStartTime)
+                    weekStartTime: Number(data.weekStartTime),
+                    rolloverAmount: ethers.formatUnits(data.rolloverAmount, 6),
+                    totalPrizePool: ethers.formatUnits(data.totalPrizePool, 6)
                 };
                 console.log('Common data fetched successfully');
                 break;
@@ -148,48 +152,6 @@ export async function GET(request: NextRequest) {
             }
         }
 
-        // Get rollover amount with retry
-        let rolloverAmount = '0';
-        for (let attempt = 1; attempt <= 3; attempt++) {
-            try {
-                const rollover = await contract.getRolloverAmount();
-                rolloverAmount = ethers.formatUnits(rollover, 6);
-                console.log('Rollover amount fetched successfully');
-                break;
-            } catch (error: any) {
-                console.log(`Rollover amount fetch failed (attempt ${attempt}):`, error);
-                if (attempt === 2) {
-                    switchRpcEndpoint();
-                }
-                if (attempt === 3) {
-                    console.log('All rollover amount fetch attempts failed');
-                } else {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                }
-            }
-        }
-
-        // Get total prize pool with retry
-        let totalPrizePool = '0';
-        for (let attempt = 1; attempt <= 3; attempt++) {
-            try {
-                const total = await contract.getTotalPrizePool();
-                totalPrizePool = ethers.formatUnits(total, 6);
-                console.log('Total prize pool fetched successfully');
-                break;
-            } catch (error: any) {
-                console.log(`Total prize pool fetch failed (attempt ${attempt}):`, error);
-                if (attempt === 2) {
-                    switchRpcEndpoint();
-                }
-                if (attempt === 3) {
-                    console.log('All total prize pool fetch attempts failed');
-                } else {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                }
-            }
-        }
-
         return NextResponse.json({
             address: address,
             isOwner: isOwner,
@@ -197,8 +159,8 @@ export async function GET(request: NextRequest) {
             currentPrizePool: commonData.currentPrizePool,
             totalParticipants: commonData.totalParticipants,
             weekStartTime: commonData.weekStartTime,
-            rolloverAmount: rolloverAmount,
-            totalPrizePool: totalPrizePool,
+            rolloverAmount: commonData.rolloverAmount,
+            totalPrizePool: commonData.totalPrizePool,
             timestamp: new Date().toISOString()
         });
 

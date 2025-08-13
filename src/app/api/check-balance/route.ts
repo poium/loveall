@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
 
         console.log('Checking balance for address:', address);
 
-        // Get user data from contract with retry
+        // Get user data from contract with retry (optimized - single RPC call)
         let userData = null;
         
         for (let attempt = 1; attempt <= 3; attempt++) {
@@ -110,68 +110,15 @@ export async function GET(request: NextRequest) {
             }
         }
 
-        // Check USDC balance for display purposes
-        let usdcBalance = ethers.parseUnits('0', 6);
-        let balanceFormatted = '0';
-        
-        for (let attempt = 1; attempt <= 3; attempt++) {
-            try {
-                usdcBalance = await usdcContract.balanceOf(address);
-                balanceFormatted = ethers.formatUnits(usdcBalance, 6);
-                break;
-            } catch (error: any) {
-                console.log(`Balance check failed (attempt ${attempt}):`, error);
-                if (attempt === 2) {
-                    switchRpcEndpoint();
-                }
-                if (attempt === 3) {
-                    console.log('All balance check attempts failed');
-                } else {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                }
-            }
-        }
-
-        // Check allowance for the contract with retry
-        let allowance = ethers.parseUnits('0', 6);
-        let allowanceFormatted = '0';
-        
-        for (let attempt = 1; attempt <= 3; attempt++) {
-            try {
-                allowance = await usdcContract.allowance(address, CONTRACT_ADDRESS);
-                allowanceFormatted = ethers.formatUnits(allowance, 6);
-                break;
-            } catch (error: any) {
-                console.log(`Allowance check failed (attempt ${attempt}):`, error);
-                if (attempt === 2) {
-                    switchRpcEndpoint();
-                }
-                if (attempt === 3) {
-                    console.log('All allowance check attempts failed');
-                } else {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                }
-            }
-        }
-
-        // Get contract balance and participation status
+        // Extract data from single getUserData call
         const contractBalance = userData ? ethers.formatUnits(userData.balance, 6) : '0';
         const hasSufficientBalance = userData ? userData.hasSufficientBalance : false;
         const hasParticipatedThisWeek = userData ? userData.hasParticipatedThisWeek : false;
         const participationsCount = userData ? Number(userData.participationsCount) : 0;
 
-        // Check if user has enough balance and allowance for 1 cent
-        const CAST_COST = ethers.parseUnits('0.01', 6);
-        const hasEnoughBalance = usdcBalance >= CAST_COST;
-        const hasEnoughAllowance = allowance >= CAST_COST;
-
         return NextResponse.json({
             address: address,
-            usdcBalance: balanceFormatted,
             contractBalance: contractBalance,
-            contractAllowance: allowanceFormatted,
-            hasEnoughBalance: hasEnoughBalance,
-            hasEnoughAllowance: hasEnoughAllowance,
             hasSufficientBalance: hasSufficientBalance,
             hasParticipatedThisWeek: hasParticipatedThisWeek,
             participationsCount: participationsCount,
