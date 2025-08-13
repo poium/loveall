@@ -78,7 +78,7 @@ Generate a response that feels natural and continues the conversation:`;
                         content: context
                     }
                 ],
-                max_tokens: 200,
+                max_tokens: 500,
                 temperature: 0.7
             })
         });
@@ -94,10 +94,35 @@ Generate a response that feels natural and continues the conversation:`;
         console.log('Grok API response data:', JSON.stringify(data, null, 2));
         
         const grokResponse = data.choices?.[0]?.message?.content?.trim();
+        const reasoningContent = data.choices?.[0]?.message?.reasoning_content;
         
         if (grokResponse) {
             console.log('Grok AI response:', grokResponse);
             return grokResponse;
+        } else if (reasoningContent && data.choices?.[0]?.finish_reason === 'length') {
+            // If we hit token limit but have reasoning, extract the response from reasoning
+            console.log('Token limit hit, extracting response from reasoning');
+            console.log('Reasoning content:', reasoningContent);
+            
+            // Try to extract the actual response from the reasoning
+            const lines = reasoningContent.split('\n');
+            const lastLine = lines[lines.length - 1];
+            
+            // If the last line looks like it's starting a response, use it
+            if (lastLine && lastLine.length > 10 && !lastLine.startsWith('-') && !lastLine.startsWith('The')) {
+                console.log('Extracted response from reasoning:', lastLine);
+                return lastLine;
+            }
+            
+            // Otherwise, create a simple response based on the context
+            const userMessage = cleanCastText.toLowerCase();
+            if (userMessage.includes('where are you from')) {
+                return "I'm from the digital realm of Farcaster! 🌐 Born in the cloud, raised on blockchain. Where's your favorite place to explore?";
+            } else if (userMessage.includes('hello') || userMessage.includes('hey') || userMessage.includes('hi')) {
+                return "Hey there! 😊 I'm Loveall, your flirty AI companion. What's got you in such a good mood today?";
+            } else {
+                return "Hey! 💫 I'm Loveall, and I'm absolutely delighted to meet you! What's on your mind?";
+            }
         } else {
             console.log('No valid response from Grok - bot will not respond');
             console.log('Response structure:', {
@@ -105,7 +130,8 @@ Generate a response that feels natural and continues the conversation:`;
                 hasChoices: !!data.choices,
                 choicesLength: data.choices?.length,
                 firstChoice: data.choices?.[0],
-                message: data.choices?.[0]?.message
+                message: data.choices?.[0]?.message,
+                finishReason: data.choices?.[0]?.finish_reason
             });
             return null; // No fallback, just return null
         }
