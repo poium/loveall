@@ -1,6 +1,5 @@
 # Bot files (handled by serverless functions)
 bot/
-api/bot.js
 
 # Contract files
 contracts/
