@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
+import { getBotUserData } from '@/lib/bot-data';
 
 // Smart Contract Configuration
 const CONTRACT_ADDRESS = '0x79C495b3F99EeC74ef06C79677Aee352F40F1De5';
@@ -60,49 +61,22 @@ export async function GET(request: NextRequest) {
 
         console.log('Checking balance for address:', address);
 
-        // Get user data from contract with retry (optimized - single RPC call)
-        let userData = null;
-        
-        for (let attempt = 1; attempt <= 3; attempt++) {
-            try {
-                userData = await contract.getUserData(address);
-                break;
-            } catch (error: any) {
-                console.log(`User data fetch failed (attempt ${attempt}):`, error);
-                if (attempt === 2) {
-                    switchRpcEndpoint();
-                }
-                if (attempt === 3) {
-                    console.log('All user data fetch attempts failed');
-                } else {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                }
-            }
-        }
+        // Use cache-first approach (same as bot for consistency)
+        const userData = await getBotUserData(address);
+        console.log('✅ User data retrieved from', userData.source, 'for website');
 
-        // Extract data from single getUserData call
-        const contractBalance = userData ? ethers.formatUnits(userData.balance, 6) : '0';
-        const hasSufficientBalance = userData ? userData.hasSufficientBalance : false;
-        const hasParticipatedThisWeek = userData ? userData.hasParticipatedThisWeek : false;
-        const participationsCount = userData ? Number(userData.participationsCount) : 0;
-        const conversationCount = userData ? Number(userData.conversationCount) : 0;
-        const remainingConversations = userData ? Number(userData.remainingConversations) : 3;
-        const bestScore = userData ? Number(userData.bestScore) : 0;
-        const bestConversationId = userData ? userData.bestConversationId : '0x0000000000000000000000000000000000000000000000000000000000000000';
-        const totalContributions = userData ? ethers.formatUnits(userData.totalContributions, 6) : '0';
+        const contractBalance = userData.balance;
+        const hasSufficientBalance = userData.hasSufficientBalance;
+        const hasParticipatedThisWeek = userData.hasParticipatedThisWeek;
+        const participationsCount = userData.participationsCount;
+        const conversationCount = userData.conversationCount;
+        const remainingConversations = userData.remainingConversations;
+        const bestScore = userData.bestScore;
+        const bestConversationId = userData.bestConversationId;
+        const totalContributions = userData.totalContributions;
         
-        // Process participations data with new fields
-        const participations = userData ? userData.participations.map((participation: any) => ({
-            user: participation.user,
-            fid: Number(participation.fid),
-            castHash: participation.castHash,
-            conversationId: participation.conversationId,
-            timestamp: Number(participation.timestamp),
-            weekNumber: Number(participation.weekNumber),
-            usdcAmount: ethers.formatUnits(participation.usdcAmount, 6),
-            aiScore: Number(participation.aiScore),
-            isEvaluated: participation.isEvaluated
-        })) : [];
+        // Process participations data (not available in cache yet - keep empty for now)
+        const participations = [] as any[];
 
         // Debug logging
         console.log('User data analysis:', {

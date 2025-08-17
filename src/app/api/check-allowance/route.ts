@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
+import { getBotUserData } from '@/lib/bot-data';
 
 const CONTRACT_ADDRESS = '0x79C495b3F99EeC74ef06C79677Aee352F40F1De5';
 const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
@@ -61,27 +62,10 @@ export async function GET(request: NextRequest) {
 
         console.log('Checking allowance for address:', address);
 
-        // Get USDC allowance with retry
-        let allowance = '0';
-        
-        for (let attempt = 1; attempt <= 3; attempt++) {
-            try {
-                const allowanceResult = await usdcContract.allowance(address, CONTRACT_ADDRESS);
-                allowance = ethers.formatUnits(allowanceResult, 6);
-                console.log('Allowance fetched successfully:', allowance);
-                break;
-            } catch (error: any) {
-                console.log(`Allowance fetch failed (attempt ${attempt}):`, error);
-                if (attempt === 2) {
-                    switchRpcEndpoint();
-                }
-                if (attempt === 3) {
-                    console.log('All allowance fetch attempts failed');
-                } else {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                }
-            }
-        }
+        // Use cache-first approach (same as bot for consistency)
+        const userData = await getBotUserData(address);
+        const allowance = userData.allowance;
+        console.log('✅ Allowance retrieved from', userData.source, ':', allowance);
 
         return NextResponse.json({
             address: address,
