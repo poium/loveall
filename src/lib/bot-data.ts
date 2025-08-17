@@ -36,7 +36,7 @@ function switchRpcEndpoint(): ethers.JsonRpcProvider {
     return new ethers.JsonRpcProvider(RPC_ENDPOINTS[currentRpcIndex]);
 }
 
-// Cache-first user data retrieval
+// Cache-first user data retrieval with staleness detection
 export async function getBotUserData(userAddress: string): Promise<{
     balance: string;
     hasSufficientBalance: boolean;
@@ -48,31 +48,40 @@ export async function getBotUserData(userAddress: string): Promise<{
     bestConversationId: string;
     totalContributions: string;
     allowance: string;
-    source: 'cache' | 'rpc';
+    source: 'cache' | 'rpc' | 'rpc_forced';
 }> {
     console.log('📊 Bot: Getting user data for', userAddress);
     
     // Try cache first
     const cachedData = await getCachedUserData(userAddress);
     if (cachedData) {
-        console.log('⚡ Bot: Using cached data for', userAddress);
-        return {
-            balance: cachedData.contractBalance,
-            hasSufficientBalance: cachedData.hasSufficientBalance,
-            hasParticipatedThisWeek: cachedData.hasParticipatedThisWeek,
-            participationsCount: cachedData.participationsCount,
-            conversationCount: cachedData.conversationCount,
-            remainingConversations: cachedData.remainingConversations,
-            bestScore: cachedData.bestScore,
-            bestConversationId: cachedData.bestConversationId,
-            totalContributions: cachedData.totalContributions,
-            allowance: cachedData.allowance,
-            source: 'cache'
-        };
+        // Check if cached data seems stale (balance is suspiciously low)
+        const balanceNum = parseFloat(cachedData.contractBalance);
+        const isSuspiciouslyLow = balanceNum < 0.001; // Less than 0.001 USDC suggests stale data
+        
+        if (isSuspiciouslyLow) {
+            console.log('⚠️ Bot: Cached balance seems stale:', cachedData.contractBalance, 'USDC - forcing fresh RPC call');
+        } else {
+            console.log('⚡ Bot: Using cached data for', userAddress, '- balance:', cachedData.contractBalance, 'USDC');
+            return {
+                balance: cachedData.contractBalance,
+                hasSufficientBalance: cachedData.hasSufficientBalance,
+                hasParticipatedThisWeek: cachedData.hasParticipatedThisWeek,
+                participationsCount: cachedData.participationsCount,
+                conversationCount: cachedData.conversationCount,
+                remainingConversations: cachedData.remainingConversations,
+                bestScore: cachedData.bestScore,
+                bestConversationId: cachedData.bestConversationId,
+                totalContributions: cachedData.totalContributions,
+                allowance: cachedData.allowance,
+                source: 'cache'
+            };
+        }
     }
     
-    // Fallback to RPC with retry logic
-    console.log('🔄 Bot: Cache miss, fetching from RPC for', userAddress);
+    // Fallback to RPC with retry logic (either cache miss or forced refresh)
+    const reason = cachedData ? 'stale data detected' : 'cache miss';
+    console.log(`🔄 Bot: Fetching fresh data from RPC for ${userAddress} (${reason})`);
     
     let provider = createProvider();
     let contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
@@ -96,7 +105,7 @@ export async function getBotUserData(userAddress: string): Promise<{
                 bestConversationId: userData[7],
                 totalContributions: ethers.formatUnits(userData[8], 6),
                 allowance: ethers.formatUnits(allowance, 6),
-                source: 'rpc' as const
+                source: cachedData ? 'rpc_forced' as const : 'rpc' as const
             };
             
             // Update cache for next time

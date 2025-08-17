@@ -46,9 +46,17 @@ class UserDataCache {
   getUserData(address: string): UserData | null {
     const userData = this.users.get(address.toLowerCase());
     
-    // Return data if it exists and is less than 5 minutes old
-    if (userData && (Date.now() - userData.lastUpdated) < 5 * 60 * 1000) {
+    // Return data if it exists and is less than 2 minutes old (reduced for debugging)
+    if (userData && (Date.now() - userData.lastUpdated) < 2 * 60 * 1000) {
       return userData;
+    }
+    
+    // Log cache miss reason
+    if (userData) {
+      const ageMinutes = Math.floor((Date.now() - userData.lastUpdated) / 1000 / 60);
+      console.log(`💾 Cache: User data for ${address} is ${ageMinutes} minutes old, expired`);
+    } else {
+      console.log(`💾 Cache: No cached data found for ${address}`);
     }
     
     return null;
