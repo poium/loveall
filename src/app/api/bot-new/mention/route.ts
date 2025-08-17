@@ -436,7 +436,9 @@ async function checkSingleAddressBalance(userAddress: string): Promise<{
             totalContributions
         ] = userData;
         
+        console.log('🔍 Raw balance from contract:', balance.toString(), 'wei');
         const balanceFormatted = ethers.formatUnits(balance, 6);
+        console.log('🔍 Balance formatted with 6 decimals:', balanceFormatted, 'USDC');
         
         // User can participate if they have sufficient balance and remaining conversation slots
         const canParticipate = hasSufficientBalance && remainingConversations > 0;
