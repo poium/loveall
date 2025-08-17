@@ -84,10 +84,7 @@ export async function POST(request: NextRequest) {
     });
     
     if (filteredLogs.length === 0) {
-      // Log when we extract events but none are relevant
-      if (allLogs.length > 0) {
-        console.log(`📡 QuickNode webhook received ${allLogs.length} events but none are relevant (filtered out)`);
-      }
+      // Don't log empty batches to reduce spam - just return success silently
       return NextResponse.json({ 
         status: 'success', 
         processed: 0,
