@@ -22,15 +22,6 @@ export async function POST(request: NextRequest) {
   try {
     const payload = await request.json();
     
-    // Add detailed debugging of the raw payload
-    console.log('🔍 RAW PAYLOAD STRUCTURE:', {
-      hasData: !!payload.data,
-      dataType: Array.isArray(payload.data) ? 'array' : typeof payload.data,
-      dataLength: Array.isArray(payload.data) ? payload.data.length : 'N/A',
-      metadata: payload.metadata,
-      firstDataElement: payload.data?.[0] ? typeof payload.data[0] : 'none'
-    });
-    
     // Extract logs from the triple-nested structure: data -> transaction groups -> [[], [logs...]]
     let allLogs: any[] = [];
     
