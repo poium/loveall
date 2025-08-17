@@ -19,16 +19,21 @@ const userBalances = new Map<string, {
 }>();
 
 export async function POST(request: NextRequest) {
-  console.log('📡 QuickNode webhook received');
-  
   try {
     const payload = await request.json();
-    console.log('📦 Payload metadata:', payload.metadata);
-    console.log('📋 Events count:', payload.data?.length || 0);
     
     if (!payload.data || payload.data.length === 0) {
-      console.log('✅ No events in this batch');
+      // Don't log empty batches to reduce spam - return early without logging
       return NextResponse.json({ status: 'success', processed: 0 });
+    }
+    
+    // Only log when we have events
+    console.log('📡 QuickNode webhook received with', payload.data.length, 'events');
+    console.log('📦 Block range:', payload.metadata?.batch_start_range, 'to', payload.metadata?.batch_end_range);
+    
+    // Debug the first event structure
+    if (payload.data.length > 0) {
+      console.log('🔍 First event structure:', JSON.stringify(payload.data[0], null, 2));
     }
     
     let processedEvents = 0;
