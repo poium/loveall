@@ -566,6 +566,17 @@ export default function Home() {
                     </p>
                   </div>
 
+                  {/* Cast Cost */}
+                  <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 rounded-xl p-4 border border-green-500/20">
+                    <div className="text-2xl font-bold text-green-400 mb-1">
+                      {formatUSDC(prizePoolData?.castCost || '0')} USDC
+                    </div>
+                    <p className="text-gray-300 text-sm font-medium">Cast Cost</p>
+                    <p className="text-gray-400 text-xs mt-1">
+                      Price per @loveall mention to participate
+                    </p>
+                  </div>
+
                   {/* Current Week */}
                   <div className="bg-gradient-to-r from-pink-900/30 to-rose-900/30 rounded-xl p-4 border border-pink-500/20">
                     <div className="text-2xl font-bold text-pink-400 mb-1">
@@ -964,7 +975,7 @@ export default function Home() {
                             <p>• <strong>Minimum:</strong> 0.01 USDC (required for participation)</p>
                             <p>• <strong>Recommended:</strong> 1.00 USDC (for multiple casts)</p>
                             <p>• <strong>Note:</strong> This adds USDC to your contract balance, not your wallet</p>
-                            <p>• <strong>Usage:</strong> Each @loveall mention costs 0.01 USDC from contract balance</p>
+                            <p>• <strong>Usage:</strong> Each @loveall mention costs {formatUSDC(prizePoolData?.castCost || '0.01')} USDC from contract balance</p>
                           </div>
                         </div>
                         <button
