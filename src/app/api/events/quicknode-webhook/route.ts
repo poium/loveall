@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
+import { handleDeposit, handleWithdrawal, handleApproval } from '@/lib/database';
 
 // Contract addresses
 const YOUR_CONTRACT = '0x79C495b3F99EeC74ef06C79677Aee352F40F1De5';
@@ -228,8 +229,12 @@ function updateUserBalance(userAddress: string, amount: string, type: 'deposit' 
   
   if (type === 'deposit') {
     user.contractBalance = (currentBalance + amountNum).toString();
+    // Update cache for bot
+    handleDeposit(userAddress, user.contractBalance);
   } else {
     user.contractBalance = Math.max(0, currentBalance - amountNum).toString();
+    // Update cache for bot
+    handleWithdrawal(userAddress, user.contractBalance);
   }
   
   user.lastUpdated = Date.now();
@@ -240,7 +245,8 @@ function updateUserBalance(userAddress: string, amount: string, type: 'deposit' 
 
 function updateUserApproval(userAddress: string, amount: string) {
   console.log('📝 Approval updated for', userAddress, ':', amount, 'USDC');
-  // Store approval amount if needed
+  // Update cache for bot
+  handleApproval(userAddress, amount);
 }
 
 // GET endpoint to check stored balances (for debugging)

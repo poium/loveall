@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { NeynarAPIClient, Configuration } from '@neynar/nodejs-sdk';
 import { ethers } from 'ethers';
+import { getBotUserData, getBotCommonData } from '@/lib/bot-data';
 
 // Initialize Neynar client
 const config = new Configuration({
@@ -404,57 +405,12 @@ async function checkSingleAddressBalance(userAddress: string): Promise<{
         // Create contract instance
         let contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
         
-        // Get comprehensive user data with retry logic and RPC switching
-        let userData: any = null;
-        for (let attempt = 1; attempt <= 3; attempt++) {
-            try {
-                userData = await contract.getUserData(userAddress);
-                console.log('User data retrieved:', userData);
-                
-                // Verify we got reasonable data - if balance is suspiciously low, try different RPC
-                const balance = userData[0];
-                const remainingConversations = userData[6];
-                
-                // If balance is extremely low (< 10000 wei = 0.01 USDC), likely stale data
-                if (balance < BigInt(10000) && attempt < 3) {
-                    console.log('⚠️ Stale data detected! Balance:', balance.toString(), 'wei. Switching RPC...');
-                    provider = switchRpcEndpoint();
-                    try {
-                        console.log('🔄 Switched to RPC:', provider._getConnection().url);
-                    } catch (e) {
-                        console.log('🔄 Switched to RPC: [Unable to get URL]');
-                    }
-                    console.log('📋 Re-creating contract with address:', CONTRACT_ADDRESS);
-                    contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
-                    continue; // Retry with new RPC
-                }
-                break;
-            } catch (dataError: any) {
-                console.log(`User data check failed (attempt ${attempt}) for address:`, userAddress, 'Error:', dataError);
-                
-                if (attempt === 2) {
-                    console.log('Switching RPC endpoint due to error...');
-                    provider = switchRpcEndpoint();
-                    try {
-                        console.log('🔄 Switched to RPC:', provider._getConnection().url);
-                    } catch (e) {
-                        console.log('🔄 Switched to RPC: [Unable to get URL]');
-                    }
-                    console.log('📋 Re-creating contract with address:', CONTRACT_ADDRESS);
-                    contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
-                }
-                
-                if (attempt === 3) {
-                    throw dataError;
-                } else {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                }
-            }
-        }
+        // Get user data with cache-first approach (much faster!)
+        const userData = await getBotUserData(userAddress);
+        console.log('✅ User data retrieved from', userData.source, ':', userData);
         
-        // Extract data from the tuple response
-        const [
-            balance,
+        const {
+            balance: balanceFormatted,
             hasSufficientBalance,
             hasParticipatedThisWeek,
             participationsCount,
@@ -462,18 +418,11 @@ async function checkSingleAddressBalance(userAddress: string): Promise<{
             remainingConversations,
             bestScore,
             bestConversationId,
-            totalContributions
-        ] = userData;
+            totalContributions,
+            allowance
+        } = userData;
         
-        console.log('🔍 Raw balance from contract:', balance.toString(), 'wei');
-        console.log('📋 Balance source contract:', CONTRACT_ADDRESS);
-        try {
-            console.log('🌐 Balance source RPC:', provider._getConnection().url);
-        } catch (e) {
-            console.log('🌐 Balance source RPC: [Unable to get URL]');
-        }
-        const balanceFormatted = ethers.formatUnits(balance, 6);
-        console.log('🔍 Balance formatted with 6 decimals:', balanceFormatted, 'USDC');
+        console.log('🔍 Balance:', balanceFormatted, 'USDC (from', userData.source, ')');
         
         // User can participate if they have sufficient balance and remaining conversation slots
         const canParticipate = hasSufficientBalance && remainingConversations > 0;
