@@ -63,11 +63,10 @@ function getConversationId(castData: any): string {
 
 // Initialize provider with fallback RPC endpoints
 const RPC_ENDPOINTS = [
-    process.env.BASE_RPC_URL || 'https://mainnet.base.org',
-    'https://base.blockpi.network/v1/rpc/public',
-    'https://1rpc.io/base',
-    'https://base.meowrpc.com',
-    'https://base.drpc.org'
+    'https://mainnet.base.org',  // Official Base RPC - most reliable
+    'https://base.drpc.org',     // Reliable alternative
+    'https://1rpc.io/base',      // Secondary backup
+    process.env.BASE_RPC_URL || 'https://mainnet.base.org'
 ];
 
 let provider: ethers.JsonRpcProvider;
@@ -395,23 +394,41 @@ async function checkSingleAddressBalance(userAddress: string): Promise<{
 }> {
     try {
         console.log('Checking user data for address:', userAddress);
+        console.log('📋 Using contract address:', CONTRACT_ADDRESS);
+        console.log('🌐 Using RPC endpoint:', provider.connection.url);
         
         // Create contract instance
         let contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
         
-        // Get comprehensive user data with retry logic
+        // Get comprehensive user data with retry logic and RPC switching
         let userData: any = null;
         for (let attempt = 1; attempt <= 3; attempt++) {
             try {
                 userData = await contract.getUserData(userAddress);
                 console.log('User data retrieved:', userData);
+                
+                // Verify we got reasonable data - if balance is suspiciously low, try different RPC
+                const balance = userData[0];
+                const remainingConversations = userData[6];
+                
+                // If balance is extremely low (< 100 wei) and no conversations, likely stale data
+                if (balance < 100n && remainingConversations === 0n && attempt < 3) {
+                    console.log('⚠️ Stale data detected! Balance:', balance.toString(), 'wei. Switching RPC...');
+                    provider = switchRpcEndpoint();
+                    console.log('🔄 Switched to RPC:', provider.connection.url);
+                    console.log('📋 Re-creating contract with address:', CONTRACT_ADDRESS);
+                    contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+                    continue; // Retry with new RPC
+                }
                 break;
             } catch (dataError: any) {
                 console.log(`User data check failed (attempt ${attempt}) for address:`, userAddress, 'Error:', dataError);
                 
                 if (attempt === 2) {
-                    console.log('Switching RPC endpoint...');
+                    console.log('Switching RPC endpoint due to error...');
                     provider = switchRpcEndpoint();
+                    console.log('🔄 Switched to RPC:', provider.connection.url);
+                    console.log('📋 Re-creating contract with address:', CONTRACT_ADDRESS);
                     contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
                 }
                 
@@ -437,6 +454,8 @@ async function checkSingleAddressBalance(userAddress: string): Promise<{
         ] = userData;
         
         console.log('🔍 Raw balance from contract:', balance.toString(), 'wei');
+        console.log('📋 Balance source contract:', CONTRACT_ADDRESS);
+        console.log('🌐 Balance source RPC:', provider.connection.url);
         const balanceFormatted = ethers.formatUnits(balance, 6);
         console.log('🔍 Balance formatted with 6 decimals:', balanceFormatted, 'USDC');
         
