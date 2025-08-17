@@ -415,8 +415,8 @@ async function checkSingleAddressBalance(userAddress: string): Promise<{
                 const balance = userData[0];
                 const remainingConversations = userData[6];
                 
-                // If balance is extremely low (< 100 wei) and no conversations, likely stale data
-                if (balance < 100n && remainingConversations === 0n && attempt < 3) {
+                // If balance is extremely low (< 10000 wei = 0.01 USDC), likely stale data
+                if (balance < 10000n && attempt < 3) {
                     console.log('⚠️ Stale data detected! Balance:', balance.toString(), 'wei. Switching RPC...');
                     provider = switchRpcEndpoint();
                     try {
