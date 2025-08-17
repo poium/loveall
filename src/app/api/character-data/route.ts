@@ -5,7 +5,7 @@ import { ethers } from 'ethers';
 const CONTRACT_ADDRESS = '0x79C495b3F99EeC74ef06C79677Aee352F40F1De5';
 
 // Contract ABI (import the full ABI)
-import CONTRACT_ABI_JSON from '../../../../contracts/abi.json';
+const CONTRACT_ABI_JSON = require('../../../../contracts/abi.json');
 const CONTRACT_ABI = CONTRACT_ABI_JSON;
 
 // Initialize provider with fallback RPC endpoints
