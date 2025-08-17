@@ -448,6 +448,13 @@ async function checkSingleAddressBalance(userAddress: string): Promise<{
         console.log('- Conversation count:', conversationCount.toString());
         console.log('- Remaining conversations:', remainingConversations.toString());
         console.log('- Can participate:', canParticipate);
+        console.log('🐞 DEBUG: Returning hasParticipated as:', hasParticipatedThisWeek);
+        
+        console.log('🔍 Bot returning from checkSingleAddressBalance:');
+        console.log('  - hasBalance (canParticipate):', canParticipate);
+        console.log('  - hasSufficientBalance:', hasSufficientBalance);
+        console.log('  - remainingConversations:', Number(remainingConversations));
+        console.log('  - hasParticipated:', hasParticipatedThisWeek);
         
         return {
             hasBalance: canParticipate,
@@ -727,16 +734,11 @@ export async function POST(request: NextRequest) {
                             insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your contract balance to participate. You currently have ${firstWallet.balance} USDC. Please top up your contract balance on our website and try again! 💫`;
                         }
                     } else {
-                        // Check if any wallet has already participated
-                        const hasParticipated = balanceCheck.allAddresses.some(addr => addr.hasParticipated);
-                        
-                        if (hasParticipated) {
-                            insufficientBalanceResponse = `Hey there! 😊 I see you've participated this week! Come back next week for another chance! 💫`;
-                        } else {
-                            // Show all wallet addresses in shortened format
-                            const shortAddresses = balanceCheck.allAddresses.map(addr => 
-                                `${shortenAddress(addr.address)} (${addr.balance} USDC)`
-                            ).join(', ');
+                        // For multiple wallets, just show the insufficient balance message
+                        // Don't check participation status if they don't have enough balance to participate
+                        const shortAddresses = balanceCheck.allAddresses.map(addr => 
+                            `${shortenAddress(addr.address)} (${addr.balance} USDC)`
+                        ).join(', ');
                             insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your contract balance to participate. Your contract balances: ${shortAddresses}. Please top up your contract balance on our website and try again! 💫`;
                         }
                     }
