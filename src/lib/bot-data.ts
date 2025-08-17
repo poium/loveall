@@ -1,6 +1,6 @@
 // Bot data helper functions with cache-first approach
 import { ethers } from 'ethers';
-import { getCachedUserData, getCachedCommonData, updateCachedUserData, updateCachedCommonData, UserData, CommonData } from './database';
+import { getCachedUserData, getCachedCommonData, updateCachedUserData, updateCachedCommonData, clearUserCache, UserData, CommonData } from './database';
 
 // Contract configuration
 const CONTRACT_ADDRESS = '0x79C495b3F99EeC74ef06C79677Aee352F40F1De5';
@@ -60,7 +60,9 @@ export async function getBotUserData(userAddress: string): Promise<{
         const isSuspiciouslyLow = balanceNum < 0.001; // Less than 0.001 USDC suggests stale data
         
         if (isSuspiciouslyLow) {
-            console.log('⚠️ Bot: Cached balance seems stale:', cachedData.contractBalance, 'USDC - forcing fresh RPC call');
+            console.log('⚠️ Bot: Cached balance seems stale:', cachedData.contractBalance, 'USDC - clearing cache and forcing fresh RPC call');
+            // Clear stale cache entry
+            clearUserCache(userAddress);
         } else {
             console.log('⚡ Bot: Using cached data for', userAddress, '- balance:', cachedData.contractBalance, 'USDC');
             return {

@@ -150,6 +150,21 @@ class UserDataCache {
     
     console.log('🧹 Cache: Cleaned up old user data, kept 1000 most recent');
   }
+
+  // Force clear cache for specific user (for debugging)
+  clearUserCache(address: string): void {
+    const deleted = this.users.delete(address.toLowerCase());
+    console.log(`🧹 Cache: ${deleted ? 'Cleared' : 'No data found for'} user ${address}`);
+  }
+
+  // Force clear all cache (nuclear option)
+  clearAllCache(): void {
+    const userCount = this.users.size;
+    this.users.clear();
+    this.commonData = null;
+    this.lastCommonDataUpdate = 0;
+    console.log(`🧹 Cache: Cleared all cached data (${userCount} users)`);
+  }
 }
 
 // Global cache instance
@@ -187,6 +202,15 @@ export function handleApproval(address: string, amount: string): void {
 
 export function getCacheStats(): { userCount: number, commonDataAge: number, oldestUserData: number } {
   return userDataCache.getStats();
+}
+
+// Cache invalidation functions
+export function clearUserCache(address: string): void {
+  userDataCache.clearUserCache(address);
+}
+
+export function clearAllCache(): void {
+  userDataCache.clearAllCache();
 }
 
 export { UserData, CommonData };
