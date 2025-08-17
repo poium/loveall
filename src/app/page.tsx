@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import AdminDashboard from './components/AdminDashboard';
-import CONTRACT_ABI_JSON from '../../contracts/abi.json';
+import CONTRACT_ABI_JSON from '../abi.json';
 
 interface PrizePoolData {
   totalPrizePool: string;

@@ -6,7 +6,7 @@ const CONTRACT_ADDRESS = '0x79C495b3F99EeC74ef06C79677Aee352F40F1De5';
 const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
 // Contract ABI (import the full ABI)
-const CONTRACT_ABI_JSON = require('../../../../contracts/abi.json');
+const CONTRACT_ABI_JSON = require('../../../abi.json');
 const CONTRACT_ABI = CONTRACT_ABI_JSON;
 
 // USDC ABI for allowance check
