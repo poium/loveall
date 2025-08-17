@@ -6,10 +6,10 @@ import { getCachedUserData, getCachedCommonData, updateCachedUserData, updateCac
 const CONTRACT_ADDRESS = '0x79C495b3F99EeC74ef06C79677Aee352F40F1De5';
 const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
-const CONTRACT_ABI = [
-    'function getUserData(address user) external view returns (tuple(uint256 balance, bool hasSufficientBalance, bool hasParticipatedThisWeek, uint256 participationsCount, uint256 conversationCount, uint256 remainingConversations, uint256 bestScore, bytes32 bestConversationId, uint256 totalContributions))',
-    'function getCommonData() external view returns (tuple(uint256 totalPrizePool, uint256 currentWeekPrizePool, uint256 rolloverAmount, uint256 totalContributions, uint256 totalProtocolFees, uint256 castCost, uint256 currentWeek, uint256 weekStartTime, uint256 weekEndTime, uint256 currentWeekParticipantsCount, address currentWeekWinner, uint256 currentWeekPrize, string characterName, string characterTask, bool characterIsSet))'
-];
+// Import the full ABI to ensure proper struct parsing
+import contractABI from '../abi.json';
+
+const CONTRACT_ABI = contractABI;
 
 const USDC_ABI = [
     'function balanceOf(address account) external view returns (uint256)',
@@ -96,19 +96,27 @@ export async function getBotUserData(userAddress: string): Promise<{
                 usdcContract.allowance(userAddress, CONTRACT_ADDRESS)
             ]);
             
+            // With full ABI, userData is now a proper struct object
             const result = {
-                balance: ethers.formatUnits(userData[0], 6),
-                hasSufficientBalance: userData[1],
-                hasParticipatedThisWeek: userData[2],
-                participationsCount: Number(userData[3]),
-                conversationCount: Number(userData[4]),
-                remainingConversations: Number(userData[5]),
-                bestScore: Number(userData[6]),
-                bestConversationId: userData[7],
-                totalContributions: ethers.formatUnits(userData[8], 6),
+                balance: ethers.formatUnits(userData.balance, 6),
+                hasSufficientBalance: userData.hasSufficientBalance,
+                hasParticipatedThisWeek: userData.hasParticipatedThisWeek,
+                participationsCount: Number(userData.participationsCount),
+                conversationCount: Number(userData.conversationCount),
+                remainingConversations: Number(userData.remainingConversations),
+                bestScore: Number(userData.bestScore),
+                bestConversationId: userData.bestConversationId,
+                totalContributions: ethers.formatUnits(userData.totalContributions, 6),
                 allowance: ethers.formatUnits(allowance, 6),
                 source: cachedData ? 'rpc_forced' as const : 'rpc' as const
             };
+
+            console.log('🔍 Bot: Raw userData struct:', {
+                balance: userData.balance.toString(),
+                balanceFormatted: ethers.formatUnits(userData.balance, 6),
+                hasSufficientBalance: userData.hasSufficientBalance,
+                hasParticipatedThisWeek: userData.hasParticipatedThisWeek
+            });
             
             // Update cache for next time
             updateCachedUserData(userAddress, {
@@ -186,22 +194,23 @@ export async function getBotCommonData(): Promise<{
         try {
             const commonData = await contract.getCommonData();
             
+            // With full ABI, commonData is now a proper struct object
             const result = {
-                totalPrizePool: ethers.formatUnits(commonData[0], 6),
-                currentWeekPrizePool: ethers.formatUnits(commonData[1], 6),
-                rolloverAmount: ethers.formatUnits(commonData[2], 6),
-                totalContributions: ethers.formatUnits(commonData[3], 6),
-                totalProtocolFees: ethers.formatUnits(commonData[4], 6),
-                castCost: ethers.formatUnits(commonData[5], 6),
-                currentWeek: Number(commonData[6]),
-                weekStartTime: Number(commonData[7]) * 1000,
-                weekEndTime: Number(commonData[8]) * 1000,
-                currentWeekParticipantsCount: Number(commonData[9]),
-                currentWeekWinner: commonData[10],
-                currentWeekPrize: ethers.formatUnits(commonData[11], 6),
-                characterName: commonData[12],
-                characterTask: commonData[13],
-                characterIsSet: commonData[14],
+                totalPrizePool: ethers.formatUnits(commonData.totalPrizePool, 6),
+                currentWeekPrizePool: ethers.formatUnits(commonData.currentWeekPrizePool, 6),
+                rolloverAmount: ethers.formatUnits(commonData.rolloverAmount, 6),
+                totalContributions: ethers.formatUnits(commonData.totalContributions, 6),
+                totalProtocolFees: ethers.formatUnits(commonData.totalProtocolFees, 6),
+                castCost: ethers.formatUnits(commonData.castCost, 6),
+                currentWeek: Number(commonData.currentWeek),
+                weekStartTime: Number(commonData.weekStartTime) * 1000,
+                weekEndTime: Number(commonData.weekEndTime) * 1000,
+                currentWeekParticipantsCount: Number(commonData.currentWeekParticipantsCount),
+                currentWeekWinner: commonData.currentWeekWinner,
+                currentWeekPrize: ethers.formatUnits(commonData.currentWeekPrize, 6),
+                characterName: commonData.characterName,
+                characterTask: commonData.characterTask,
+                characterIsSet: commonData.characterIsSet,
                 source: 'rpc' as const
             };
             
