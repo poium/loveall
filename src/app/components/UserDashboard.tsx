@@ -6,39 +6,108 @@ import { parseUnits, formatUnits } from 'viem';
 
 interface UserData {
   balance: string;
-  allowance: string;
-  participationCount: number;
-  lastParticipation: number;
-  canParticipate: boolean;
-  totalSpent: string;
   hasSufficientBalance: boolean;
   hasParticipatedThisWeek: boolean;
+  conversationCount: number;
+  remainingConversations: number;
   participations: Array<{
     user: string;
+    fid: string;
     castHash: string;
+    conversationId: string;
+    aiScore: number;
+    isEvaluated: boolean;
     timestamp: number;
     weekNumber: number;
     usdcAmount: string;
-    isEvaluated: boolean;
   }>;
 }
 
-const CONTRACT_ADDRESS = '0xE05efF71D71850c0FEc89660DC6588787312e453';
+interface CommonData {
+  currentWeek: number;
+  currentPrizePool: string;
+  currentWeekParticipantsCount: number;
+  castCost: string;
+  rolloverAmount: string;
+  totalProtocolFees: string;
+  characterName: string;
+  characterTask: string;
+  characterIsSet: boolean;
+}
+
+interface AICharacter {
+  name: string;
+  task: string;
+  traitNames: string[];
+  traitValues: number[];
+  traitCount: number;
+  weekNumber: number;
+  isSet: boolean;
+}
+
+const CONTRACT_ADDRESS = '0x79C495b3F99EeC74ef06C79677Aee352F40F1De5';
 const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
 const CONTRACT_ABI = [
-  { name: 'getBalance', type: 'function', stateMutability: 'view', inputs: [{ name: 'user', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] },
-  { name: 'topUp', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'amount', type: 'uint256' }], outputs: [] },
-  { name: 'withdrawBalance', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'amount', type: 'uint256' }], outputs: [] },
+  // User functions
   {
     name: 'getUserData',
     type: 'function',
     stateMutability: 'view',
     inputs: [{ name: 'user', type: 'address' }],
-    outputs: [{ components: [/* ... UserData struct ... */], name: '', type: 'tuple' }]
+    outputs: [{
+      components: [
+        { name: 'balance', type: 'uint256' },
+        { name: 'hasSufficientBalance', type: 'bool' },
+        { name: 'hasParticipatedThisWeek', type: 'bool' },
+        { name: 'conversationCount', type: 'uint256' },
+        { name: 'remainingConversations', type: 'uint256' },
+        { name: 'participations', type: 'tuple[]', components: [
+          { name: 'user', type: 'address' },
+          { name: 'fid', type: 'uint256' },
+          { name: 'castHash', type: 'bytes32' },
+          { name: 'conversationId', type: 'bytes32' },
+          { name: 'aiScore', type: 'uint256' },
+          { name: 'isEvaluated', type: 'bool' },
+          { name: 'timestamp', type: 'uint256' },
+          { name: 'weekNumber', type: 'uint256' },
+          { name: 'usdcAmount', type: 'uint256' }
+        ]}
+      ],
+      name: '',
+      type: 'tuple'
+    }]
   },
-  { name: 'hasSufficientBalance', type: 'function', stateMutability: 'view', inputs: [{ name: 'user', type: 'address' }], outputs: [{ name: '', type: 'bool' }] },
-  { name: 'hasParticipatedThisWeek', type: 'function', stateMutability: 'view', inputs: [{ name: '', type: 'uint256' }, { name: '', type: 'address' }], outputs: [{ name: '', type: 'bool' }] }
+  { name: 'topUp', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'amount', type: 'uint256' }], outputs: [] },
+  { name: 'withdrawBalance', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'amount', type: 'uint256' }], outputs: [] },
+  { name: 'getCommonData', type: 'function', stateMutability: 'view', inputs: [], outputs: [{
+    components: [
+      { name: 'currentWeek', type: 'uint256' },
+      { name: 'currentPrizePool', type: 'uint256' },
+      { name: 'currentWeekParticipantsCount', type: 'uint256' },
+      { name: 'castCost', type: 'uint256' },
+      { name: 'rolloverAmount', type: 'uint256' },
+      { name: 'totalProtocolFees', type: 'uint256' },
+      { name: 'characterName', type: 'string' },
+      { name: 'characterTask', type: 'string' },
+      { name: 'characterIsSet', type: 'bool' }
+    ],
+    name: '',
+    type: 'tuple'
+  }]},
+  { name: 'getCurrentCharacter', type: 'function', stateMutability: 'view', inputs: [], outputs: [{
+    components: [
+      { name: 'name', type: 'string' },
+      { name: 'task', type: 'string' },
+      { name: 'traitNames', type: 'string[5]' },
+      { name: 'traitValues', type: 'uint8[5]' },
+      { name: 'traitCount', type: 'uint8' },
+      { name: 'weekNumber', type: 'uint256' },
+      { name: 'isSet', type: 'bool' }
+    ],
+    name: '',
+    type: 'tuple'
+  }]}
 ] as const;
 
 const USDC_ABI = [

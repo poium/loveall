@@ -2,34 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
 
 // Smart Contract Configuration
-const CONTRACT_ADDRESS = '0xE05efF71D71850c0FEc89660DC6588787312e453';
+const CONTRACT_ADDRESS = '0x79C495b3F99EeC74ef06C79677Aee352F40F1De5';
 
-// Contract ABI for prize pool data
-const CONTRACT_ABI = [
-    {
-        name: 'getCommonData',
-        type: 'function',
-        stateMutability: 'view',
-        inputs: [],
-        outputs: [
-            {
-                components: [
-                    { name: 'totalPrizePool', type: 'uint256' },
-                    { name: 'currentWeekPrizePool', type: 'uint256' },
-                    { name: 'rolloverAmount', type: 'uint256' },
-                    { name: 'currentWeek', type: 'uint256' },
-                    { name: 'weekStartTime', type: 'uint256' },
-                    { name: 'weekEndTime', type: 'uint256' },
-                    { name: 'currentWeekParticipantsCount', type: 'uint256' },
-                    { name: 'currentWeekWinner', type: 'address' },
-                    { name: 'currentWeekPrize', type: 'uint256' }
-                ],
-                name: '',
-                type: 'tuple'
-            }
-        ]
-    }
-];
+// Contract ABI (import the full ABI)
+import CONTRACT_ABI_JSON from '../../../../contracts/abi.json';
+const CONTRACT_ABI = CONTRACT_ABI_JSON;
 
 // Initialize provider with fallback RPC endpoints
 const RPC_ENDPOINTS = [
@@ -59,20 +36,42 @@ export async function GET(request: NextRequest) {
 
         // Get common data with retry (optimized - single RPC call)
         let commonData = {
+            totalPrizePool: '0.00',
+            currentWeekPrizePool: '0.00',
+            rolloverAmount: '0.00',
+            totalContributions: '0.00',
+            totalProtocolFees: '0.00',
+            castCost: '0.01',
             currentWeek: 1,
-            currentPrizePool: '0.00',
-            totalParticipants: 0,
-            weekStartTime: Date.now()
+            weekStartTime: Date.now(),
+            weekEndTime: Date.now() + (2 * 60 * 60 * 1000), // 2 hours from now
+            currentWeekParticipantsCount: 0,
+            currentWeekWinner: '0x0000000000000000000000000000000000000000',
+            currentWeekPrize: '0.00',
+            characterName: '',
+            characterTask: '',
+            characterIsSet: false
         };
 
         for (let attempt = 1; attempt <= 3; attempt++) {
             try {
                 const data = await contract.getCommonData();
                 commonData = {
+                    totalPrizePool: ethers.formatUnits(data.totalPrizePool, 6),
+                    currentWeekPrizePool: ethers.formatUnits(data.currentWeekPrizePool, 6),
+                    rolloverAmount: ethers.formatUnits(data.rolloverAmount, 6),
+                    totalContributions: ethers.formatUnits(data.totalContributions, 6),
+                    totalProtocolFees: ethers.formatUnits(data.totalProtocolFees, 6),
+                    castCost: ethers.formatUnits(data.castCost, 6),
                     currentWeek: Number(data.currentWeek),
-                    currentPrizePool: ethers.formatUnits(data.currentWeekPrizePool, 6),
-                    totalParticipants: Number(data.currentWeekParticipantsCount),
-                    weekStartTime: Number(data.weekStartTime) * 1000 // Convert to milliseconds
+                    weekStartTime: Number(data.weekStartTime) * 1000, // Convert to milliseconds
+                    weekEndTime: Number(data.weekEndTime) * 1000, // Convert to milliseconds
+                    currentWeekParticipantsCount: Number(data.currentWeekParticipantsCount),
+                    currentWeekWinner: data.currentWeekWinner,
+                    currentWeekPrize: ethers.formatUnits(data.currentWeekPrize, 6),
+                    characterName: data.characterName,
+                    characterTask: data.characterTask,
+                    characterIsSet: data.characterIsSet
                 };
                 console.log('Prize pool data fetched successfully:', commonData);
                 break;
@@ -85,10 +84,21 @@ export async function GET(request: NextRequest) {
                     console.log('All prize pool data fetch attempts failed, using fallback data');
                     // Use fallback data if all attempts fail
                     commonData = {
+                        totalPrizePool: '0.00',
+                        currentWeekPrizePool: '0.00',
+                        rolloverAmount: '0.00',
+                        totalContributions: '0.00',
+                        totalProtocolFees: '0.00',
+                        castCost: '0.01',
                         currentWeek: 1,
-                        currentPrizePool: '0.00',
-                        totalParticipants: 0,
-                        weekStartTime: Date.now()
+                        weekStartTime: Date.now(),
+                        weekEndTime: Date.now() + (2 * 60 * 60 * 1000),
+                        currentWeekParticipantsCount: 0,
+                        currentWeekWinner: '0x0000000000000000000000000000000000000000',
+                        currentWeekPrize: '0.00',
+                        characterName: '',
+                        characterTask: '',
+                        characterIsSet: false
                     };
                 } else {
                     await new Promise(resolve => setTimeout(resolve, 1000));

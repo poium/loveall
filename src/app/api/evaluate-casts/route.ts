@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
 
-const CONTRACT_ADDRESS = '0xE05efF71D71850c0FEc89660DC6588787312e453';
+const CONTRACT_ADDRESS = '0x79C495b3F99EeC74ef06C79677Aee352F40F1De5';
 
 // Contract ABI for getting participation data
 const CONTRACT_ABI = [

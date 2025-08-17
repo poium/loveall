@@ -82,7 +82,7 @@ Loveall is a sophisticated flirting bot for Farcaster that creates an engaging, 
 
 ### Contract Address
 ```
-0xE05efF71D71850c0FEc89660DC6588787312e453 (Base mainnet)
+0x79C495b3F99EeC74ef06C79677Aee352F40F1De5 (Base mainnet)
 ```
 
 ### Core Economics
@@ -339,7 +339,7 @@ cp .env.example .env.local
 # Blockchain
 PRIVATE_KEY=your_contract_owner_private_key
 BASE_RPC_URL=https://mainnet.base.org
-CONTRACT_ADDRESS=0xE05efF71D71850c0FEc89660DC6588787312e453
+CONTRACT_ADDRESS=0x79C495b3F99EeC74ef06C79677Aee352F40F1De5
 USDC_ADDRESS=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
 
 # Farcaster

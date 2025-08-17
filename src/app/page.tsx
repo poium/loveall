@@ -1,15 +1,39 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import AdminDashboard from './components/AdminDashboard';
+import CONTRACT_ABI_JSON from '../../contracts/abi.json';
 
 interface PrizePoolData {
+  totalPrizePool: string;
+  currentWeekPrizePool: string;
+  rolloverAmount: string;
+  totalContributions: string;
+  totalProtocolFees: string;
+  castCost: string;
   currentWeek: number;
-  currentPrizePool: string;
-  totalParticipants: number;
   weekStartTime: number;
+  weekEndTime: number;
+  currentWeekParticipantsCount: number;
+  currentWeekWinner: string;
+  currentWeekPrize: string;
+  characterName: string;
+  characterTask: string;
+  characterIsSet: boolean;
+}
+
+interface CastParticipation {
+  user: string;
+  fid: number;
+  castHash: string;
+  conversationId: string;
+  timestamp: number;
+  weekNumber: number;
+  usdcAmount: string;
+  aiScore: number;
+  isEvaluated: boolean;
 }
 
 interface UserData {
@@ -17,37 +41,29 @@ interface UserData {
   hasSufficientBalance: boolean;
   hasParticipatedThisWeek: boolean;
   participationsCount: number;
-  participations: Array<{
-    user: string;
-    castHash: string;
-    timestamp: number;
-    weekNumber: number;
-    usdcAmount: string;
-    isEvaluated: boolean;
-  }>;
+  conversationCount: number;
+  remainingConversations: number;
+  bestScore: number;
+  bestConversationId: string;
+  totalContributions: string;
+  participations: CastParticipation[];
+}
+
+interface CharacterData {
+  name: string;
+  task: string;
+  traitNames: string[];
+  traitValues: number[];
+  traitCount: number;
+  isSet: boolean;
 }
 
 // Contract addresses
-const CONTRACT_ADDRESS = '0xE05efF71D71850c0FEc89660DC6588787312e453';
+const CONTRACT_ADDRESS = '0x79C495b3F99EeC74ef06C79677Aee352F40F1De5';
 const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
-// Contract ABIs
-const CONTRACT_ABI = [
-  {
-    name: 'topUp',
-    type: 'function',
-    stateMutability: 'nonpayable',
-    inputs: [{ name: 'amount', type: 'uint256' }],
-    outputs: []
-  },
-  {
-    name: 'withdrawBalance',
-    type: 'function',
-    stateMutability: 'nonpayable',
-    inputs: [{ name: 'amount', type: 'uint256' }],
-    outputs: []
-  }
-];
+// Contract ABI - imported from abi.json
+const CONTRACT_ABI = CONTRACT_ABI_JSON;
 
 const USDC_ABI = [
   {
@@ -63,10 +79,18 @@ const USDC_ABI = [
 ];
 
 export default function Home() {
+  const renderCount = useRef(0);
+  renderCount.current += 1;
+  console.log(`🏠 Home component render #${renderCount.current} at ${new Date().toISOString()}`);
   const [prizePoolData, setPrizePoolData] = useState<PrizePoolData | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [characterData, setCharacterData] = useState<CharacterData | null>(null);
   const [loading, setLoading] = useState(true);
   const [userLoading, setUserLoading] = useState(false);
+  const [characterLoading, setCharacterLoading] = useState(false);
+  const [lastCharacterFetch, setLastCharacterFetch] = useState(0);
+  const lastCharacterFetchRef = useRef(0);
+  const characterFetchInProgress = useRef(false);
   const [refreshDisabled, setRefreshDisabled] = useState(false);
   const [refreshCountdown, setRefreshCountdown] = useState(0);
   const [topUpAmount, setTopUpAmount] = useState('');
@@ -76,6 +100,7 @@ export default function Home() {
   const [transactionSuccess, setTransactionSuccess] = useState('');
   const [transactionError, setTransactionError] = useState('');
   const { isConnected, address } = useAccount();
+  console.log(`💰 Account state: isConnected=${isConnected}, address=${address?.slice(0, 6)}...`);
 
   // Wagmi hooks for contract interactions
   const { writeContract: writeContractTopUp, isPending: isTopUpPending, data: topUpHash } = useWriteContract();
@@ -96,17 +121,36 @@ export default function Home() {
   });
 
   useEffect(() => {
+    console.log('🔄 Main useEffect triggered - Initial fetch');
     fetchPrizePoolData();
+    fetchCharacterData();
     
     // Refresh data every 1 minute
     const interval = setInterval(() => {
+      console.log('⏰ Interval tick - 1 minute passed');
       fetchPrizePoolData();
+      
+      // Character data every 10 minutes (600,000ms)
+      const now = Date.now();
+      const timeSinceLastFetch = now - lastCharacterFetchRef.current;
+      const tenMinutes = 10 * 60 * 1000;
+      
+      if (timeSinceLastFetch >= tenMinutes) {
+        console.log(`Auto-fetching character data (${Math.floor(timeSinceLastFetch / 60000)} minutes since last fetch)`);
+        fetchCharacterData();
+      } else {
+        console.log(`Character data not due for update (${Math.floor((tenMinutes - timeSinceLastFetch) / 60000)} minutes remaining)`);
+      }
+      
       if (isConnected && address) {
         fetchUserData();
       }
     }, 60000); // 1 minute
     
-    return () => clearInterval(interval);
+    return () => {
+      console.log('🧹 Cleaning up interval');
+      clearInterval(interval);
+    };
   }, [isConnected, address]);
 
   useEffect(() => {
@@ -153,20 +197,42 @@ export default function Home() {
       } else {
         console.error('Failed to fetch prize pool data:', response.status, response.statusText);
         const mockData: PrizePoolData = {
+          totalPrizePool: "0.00",
+          currentWeekPrizePool: "0.00",
+          rolloverAmount: "0.00",
+          totalContributions: "0.00",
+          totalProtocolFees: "0.00",
+          castCost: "0.01",
           currentWeek: 1,
-          currentPrizePool: "0.00",
-          totalParticipants: 0,
-          weekStartTime: Date.now()
+          weekStartTime: Date.now(),
+          weekEndTime: Date.now() + (2 * 60 * 60 * 1000),
+          currentWeekParticipantsCount: 0,
+          currentWeekWinner: "0x0000000000000000000000000000000000000000",
+          currentWeekPrize: "0.00",
+          characterName: "",
+          characterTask: "",
+          characterIsSet: false
         };
         setPrizePoolData(mockData);
       }
     } catch (error) {
       console.error('Error fetching prize pool data:', error);
       const mockData: PrizePoolData = {
+        totalPrizePool: "0.00",
+        currentWeekPrizePool: "0.00",
+        rolloverAmount: "0.00",
+        totalContributions: "0.00",
+        totalProtocolFees: "0.00",
+        castCost: "0.01",
         currentWeek: 1,
-        currentPrizePool: "0.00",
-        totalParticipants: 0,
-        weekStartTime: Date.now()
+        weekStartTime: Date.now(),
+        weekEndTime: Date.now() + (2 * 60 * 60 * 1000),
+        currentWeekParticipantsCount: 0,
+        currentWeekWinner: "0x0000000000000000000000000000000000000000",
+        currentWeekPrize: "0.00",
+        characterName: "",
+        characterTask: "",
+        characterIsSet: false
       };
       setPrizePoolData(mockData);
     } finally {
@@ -188,6 +254,11 @@ export default function Home() {
           hasSufficientBalance: data.hasSufficientBalance || false,
           hasParticipatedThisWeek: data.hasParticipatedThisWeek || false,
           participationsCount: data.participationsCount || 0,
+          conversationCount: data.conversationCount || 0,
+          remainingConversations: data.remainingConversations || 3,
+          bestScore: data.bestScore || 0,
+          bestConversationId: data.bestConversationId || '',
+          totalContributions: data.totalContributions || '0',
           participations: data.participations || []
         });
         
@@ -216,14 +287,75 @@ export default function Home() {
     }
   };
 
+  const fetchCharacterData = async () => {
+    // Prevent concurrent requests
+    if (characterFetchInProgress.current) {
+      console.log('🚫 Character fetch already in progress, skipping...');
+      return;
+    }
+
+    try {
+      characterFetchInProgress.current = true;
+      setCharacterLoading(true);
+      const timestamp = new Date().toISOString();
+      console.log(`🎭 [${timestamp}] fetchCharacterData called`);
+      const response = await fetch('/api/character-data');
+      console.log('Character API response status:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Character data received:', data);
+        console.log('Character isSet:', data.isSet);
+        console.log('Character name:', data.name);
+        setCharacterData(data);
+        const now = Date.now();
+        setLastCharacterFetch(now); // Track when we last fetched (for UI display)
+        lastCharacterFetchRef.current = now; // Track when we last fetched (for interval logic)
+      } else {
+        console.error('Failed to fetch character data:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error response body:', errorText);
+        setCharacterData({
+          name: '',
+          task: '',
+          traitNames: [],
+          traitValues: [],
+          traitCount: 0,
+          isSet: false
+        });
+        const now = Date.now();
+        setLastCharacterFetch(now); // Track attempt even if failed
+        lastCharacterFetchRef.current = now;
+      }
+    } catch (error) {
+      console.error('Error fetching character data:', error);
+      setCharacterData({
+        name: '',
+        task: '',
+        traitNames: [],
+        traitValues: [],
+        traitCount: 0,
+        isSet: false
+      });
+      const now = Date.now();
+      setLastCharacterFetch(now); // Track attempt even if failed
+      lastCharacterFetchRef.current = now;
+    } finally {
+      setCharacterLoading(false);
+      characterFetchInProgress.current = false;
+    }
+  };
+
   const handleManualRefresh = async () => {
     if (refreshDisabled) return;
+    console.log('🔄 Manual refresh triggered');
     
     setRefreshDisabled(true);
     setRefreshCountdown(15);
     
-    // Fetch both data types
+    // Fetch all data types
     await fetchPrizePoolData();
+    await fetchCharacterData(); // Manual refresh = instant character update
     if (isConnected && address) {
       await fetchUserData();
       await fetchAllowance();
@@ -325,10 +457,8 @@ export default function Home() {
     if (!prizePoolData) return '';
     
     const now = Date.now();
-    const weekStart = prizePoolData.weekStartTime;
-    const weekDuration = 2 * 60 * 60 * 1000; // 2 hours in milliseconds (for testing)
-    const nextWeekStart = weekStart + weekDuration;
-    const timeLeft = nextWeekStart - now;
+    const weekEnd = prizePoolData.weekEndTime * 1000; // Convert to milliseconds
+    const timeLeft = weekEnd - now;
     
     if (timeLeft <= 0) return 'New week starting soon!';
     
@@ -347,6 +477,21 @@ export default function Home() {
 
   const formatTimestamp = (timestamp: number) => {
     return new Date(timestamp * 1000).toLocaleString();
+  };
+
+  const getNextCharacterUpdate = () => {
+    if (lastCharacterFetch === 0) return '';
+    
+    const nextUpdate = lastCharacterFetch + (10 * 60 * 1000); // 10 minutes
+    const now = Date.now();
+    const timeLeft = nextUpdate - now;
+    
+    if (timeLeft <= 0) return 'Next auto-update: Now';
+    
+    const minutes = Math.floor(timeLeft / (60 * 1000));
+    const seconds = Math.floor((timeLeft % (60 * 1000)) / 1000);
+    
+    return `Next auto-update: ${minutes}m ${seconds}s`;
   };
 
   return (
@@ -376,7 +521,7 @@ export default function Home() {
                  <div className="flex justify-between items-center mb-6">
                    <div>
                      <h2 className="text-2xl font-bold text-white">📊 Complete System Overview</h2>
-                     <p className="text-sm text-gray-400 mt-1">Auto-refresh every 1 minute</p>
+                     <p className="text-sm text-gray-400 mt-1">Prize data: 1min • Character: 10min • User data: 1min</p>
             </div>
                    <button
                      onClick={handleManualRefresh}
@@ -410,14 +555,14 @@ export default function Home() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   
-                  {/* Total Prize Pool */}
+                  {/* Current Week Prize Pool */}
                   <div className="bg-gradient-to-r from-purple-900/30 to-indigo-900/30 rounded-xl p-4 border border-purple-500/20">
                     <div className="text-2xl font-bold text-purple-400 mb-1">
-                  {formatUSDC(prizePoolData?.currentPrizePool || '0')} USDC
+                  {formatUSDC(prizePoolData?.currentWeekPrizePool || '0')} USDC
                 </div>
                     <p className="text-gray-300 text-sm font-medium">Current Week Prize Pool</p>
                     <p className="text-gray-400 text-xs mt-1">
-                      Accumulated from this week's participations (0.01 USDC per cast)
+                      Accumulated from this week's participations ({formatUSDC(prizePoolData?.castCost || '0')} USDC per cast)
                     </p>
                   </div>
 
@@ -435,7 +580,7 @@ export default function Home() {
                   {/* Total Participants */}
                   <div className="bg-gradient-to-r from-blue-900/30 to-cyan-900/30 rounded-xl p-4 border border-blue-500/20">
                     <div className="text-2xl font-bold text-blue-400 mb-1">
-                  {prizePoolData?.totalParticipants || 0}
+                  {prizePoolData?.currentWeekParticipantsCount || 0}
                 </div>
                     <p className="text-gray-300 text-sm font-medium">Participants This Week</p>
                     <p className="text-gray-400 text-xs mt-1">
@@ -468,7 +613,7 @@ export default function Home() {
                   {/* Rollover Amount */}
                   <div className="bg-gradient-to-r from-teal-900/30 to-cyan-900/30 rounded-xl p-4 border border-teal-500/20">
                     <div className="text-2xl font-bold text-teal-400 mb-1">
-                      0.00 USDC
+                      {formatUSDC(prizePoolData?.rolloverAmount || '0')} USDC
                     </div>
                     <p className="text-gray-300 text-sm font-medium">Rollover Amount</p>
                     <p className="text-gray-400 text-xs mt-1">
@@ -479,7 +624,7 @@ export default function Home() {
                   {/* Total Prize Pool Ever */}
                   <div className="bg-gradient-to-r from-indigo-900/30 to-purple-900/30 rounded-xl p-4 border border-indigo-500/20">
                     <div className="text-2xl font-bold text-indigo-400 mb-1">
-                      {formatUSDC(prizePoolData?.currentPrizePool || '0')} USDC
+                      {formatUSDC(prizePoolData?.totalPrizePool || '0')} USDC
                     </div>
                     <p className="text-gray-300 text-sm font-medium">Total Prize Pool Ever</p>
                     <p className="text-gray-400 text-xs mt-1">
@@ -490,14 +635,147 @@ export default function Home() {
                   {/* Current Week Winner */}
                   <div className="bg-gradient-to-r from-red-900/30 to-pink-900/30 rounded-xl p-4 border border-red-500/20">
                     <div className="text-sm font-bold text-red-400 mb-1">
-                      Not Selected
+                      {prizePoolData?.currentWeekWinner && prizePoolData?.currentWeekWinner !== '0x0000000000000000000000000000000000000000' 
+                        ? `${prizePoolData.currentWeekWinner.slice(0, 6)}...${prizePoolData.currentWeekWinner.slice(-4)}`
+                        : 'Not Selected'}
                     </div>
                     <p className="text-gray-300 text-sm font-medium">Current Week Winner</p>
                     <p className="text-gray-400 text-xs mt-1">
-                      Winner selected by admin (if any)
+                      {prizePoolData?.currentWeekPrize && parseFloat(prizePoolData.currentWeekPrize) > 0
+                        ? `Prize: ${formatUSDC(prizePoolData.currentWeekPrize)} USDC`
+                        : 'Winner selected by admin (if any)'}
                     </p>
                   </div>
                 </div>
+              </div>
+
+              {/* AI Character Section */}
+              <div>
+                <h3 className="text-xl font-bold text-white mb-4 flex items-center justify-between">
+                  <div className="flex items-center">
+                    <span className="bg-violet-600 text-white px-2 py-1 rounded text-sm mr-3">getCurrentCharacter()</span>
+                    AI Character for Week {prizePoolData?.currentWeek || 1}
+                  </div>
+                  {lastCharacterFetch > 0 && (
+                    <div className="text-xs text-violet-400 bg-violet-900/30 px-2 py-1 rounded">
+                      Updated: {new Date(lastCharacterFetch).toLocaleTimeString()}
+                      <br />
+                      {getNextCharacterUpdate()}
+                    </div>
+                  )}
+                </h3>
+                
+                {characterLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-400 mx-auto"></div>
+                    <p className="mt-2 text-gray-300">Loading character data...</p>
+                  </div>
+                ) : characterData && characterData.isSet ? (
+                  // Debug: Character data exists and isSet is true
+                  <div className="bg-gradient-to-br from-violet-900/30 via-purple-900/30 to-pink-900/30 rounded-2xl p-6 border border-violet-500/20">
+                    {/* Character Header */}
+                    <div className="text-center mb-6">
+                      <div className="w-20 h-20 bg-gradient-to-br from-violet-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span className="text-3xl">🤖</span>
+                      </div>
+                      <h4 className="text-3xl font-bold text-white mb-2">{characterData.name}</h4>
+                      <div className="bg-violet-900/50 rounded-lg p-4 border border-violet-500/20">
+                        <p className="text-violet-200 text-lg leading-relaxed">{characterData.task}</p>
+                      </div>
+                    </div>
+
+                    {/* Character Traits */}
+                    {characterData.traitCount > 0 && (
+                      <div>
+                        <h5 className="text-xl font-semibold text-white mb-4 text-center">Character Traits</h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {characterData.traitNames.map((traitName, index) => (
+                            <div key={index} className="bg-gradient-to-r from-purple-900/50 to-pink-900/50 rounded-xl p-4 border border-purple-500/30">
+                              <div className="flex justify-between items-center">
+                                <span className="text-purple-200 font-medium">{traitName}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-white font-bold text-lg">{characterData.traitValues[index]}</span>
+                                  <span className="text-purple-300 text-sm">/10</span>
+                                </div>
+                              </div>
+                              {/* Trait bar */}
+                              <div className="mt-2 w-full bg-purple-900/50 rounded-full h-2">
+                                <div 
+                                  className="bg-gradient-to-r from-purple-400 to-pink-400 h-2 rounded-full transition-all duration-300"
+                                  style={{ width: `${(characterData.traitValues[index] / 10) * 100}%` }}
+                                ></div>
+                              </div>
+                              {/* Trait description */}
+                              <div className="mt-2 text-xs text-purple-300">
+                                {characterData.traitValues[index] >= 8 ? 'Excellent' :
+                                 characterData.traitValues[index] >= 6 ? 'Good' :
+                                 characterData.traitValues[index] >= 4 ? 'Average' : 'Needs Work'}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        {/* Character Stats Summary */}
+                        <div className="mt-6 bg-violet-900/30 rounded-xl p-4 border border-violet-500/20">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                            <div>
+                              <div className="text-2xl font-bold text-violet-400">
+                                {characterData.traitCount}
+                              </div>
+                              <div className="text-violet-200 text-sm">Active Traits</div>
+                            </div>
+                            <div>
+                              <div className="text-2xl font-bold text-violet-400">
+                                {characterData.traitValues.reduce((sum, val) => sum + val, 0)}
+                              </div>
+                              <div className="text-violet-200 text-sm">Total Points</div>
+                            </div>
+                            <div>
+                              <div className="text-2xl font-bold text-violet-400">
+                                {(characterData.traitValues.reduce((sum, val) => sum + val, 0) / characterData.traitCount).toFixed(1)}
+                              </div>
+                              <div className="text-violet-200 text-sm">Average Score</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* How to Interact */}
+                    <div className="mt-6 bg-gradient-to-r from-blue-900/30 to-indigo-900/30 rounded-xl p-4 border border-blue-500/20">
+                      <h5 className="text-lg font-semibold text-white mb-3 flex items-center">
+                        <span className="mr-2">💬</span>
+                        How to Interact
+                      </h5>
+                      <div className="text-blue-200 text-sm space-y-2">
+                        <p>• Mention <span className="font-mono bg-blue-900/50 px-2 py-1 rounded">@loveall</span> in your Farcaster casts</p>
+                        <p>• Engage with the AI character's personality and complete the given task</p>
+                        <p>• Your conversation will be evaluated based on the character traits shown above</p>
+                        <p>• Higher scores increase your chances of winning the weekly prize pool!</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-600/20 text-center">
+                    <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <span className="text-2xl">❓</span>
+                    </div>
+                    <h4 className="text-xl font-semibold text-white mb-2">No Character Set</h4>
+                    <p className="text-gray-400 mb-4">
+                      The admin hasn't set an AI character for this week yet. Check back later!
+                    </p>
+                    {/* Debug info */}
+                    {characterData && (
+                      <div className="bg-gray-900/50 rounded p-3 text-xs text-gray-400 text-left">
+                        <p><strong>Debug:</strong></p>
+                        <p>Name: {characterData.name || 'empty'}</p>
+                        <p>Task: {characterData.task || 'empty'}</p>
+                        <p>isSet: {String(characterData.isSet)}</p>
+                        <p>traitCount: {characterData.traitCount}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* getUserData() Section - Only show when connected */}
@@ -582,25 +860,58 @@ export default function Home() {
                         </p>
                       </div>
 
-                      {/* Recent Activity */}
+                      {/* Conversation Count */}
                       <div className="bg-gradient-to-r from-indigo-900/30 to-purple-900/30 rounded-xl p-4 border border-indigo-500/20">
                         <div className="text-2xl font-bold text-indigo-400 mb-1">
-                          {userData.participations.length}
+                          {userData.conversationCount}
             </div>
-                        <p className="text-gray-300 text-sm font-medium">Total Participations</p>
+                        <p className="text-gray-300 text-sm font-medium">Active Conversations</p>
                         <p className="text-gray-400 text-xs mt-1">
-                          Number of casts you've participated in
+                          Number of different conversations this week
                         </p>
         </div>
+
+                      {/* Best AI Score */}
+                      <div className="bg-gradient-to-r from-emerald-900/30 to-teal-900/30 rounded-xl p-4 border border-emerald-500/20">
+                        <div className="text-2xl font-bold text-emerald-400 mb-1">
+                          {userData.bestScore}/50
+                        </div>
+                        <p className="text-gray-300 text-sm font-medium">Best AI Score</p>
+                        <p className="text-gray-400 text-xs mt-1">
+                          Highest AI evaluation score this week
+                        </p>
+                      </div>
+
+                      {/* Remaining Conversations */}
+                      <div className="bg-gradient-to-r from-orange-900/30 to-red-900/30 rounded-xl p-4 border border-orange-500/20">
+                        <div className="text-2xl font-bold text-orange-400 mb-1">
+                          {userData.remainingConversations}
+                        </div>
+                        <p className="text-gray-300 text-sm font-medium">Remaining Conversations</p>
+                        <p className="text-gray-400 text-xs mt-1">
+                          Max 3 conversations per week allowed
+                        </p>
+                      </div>
+
+                      {/* Total Contributions */}
+                      <div className="bg-gradient-to-r from-violet-900/30 to-purple-900/30 rounded-xl p-4 border border-violet-500/20">
+                        <div className="text-2xl font-bold text-violet-400 mb-1">
+                          {formatUSDC(userData.totalContributions || '0')} USDC
+                        </div>
+                        <p className="text-gray-300 text-sm font-medium">Total Contributions</p>
+                        <p className="text-gray-400 text-xs mt-1">
+                          Direct contributions to prize pool
+                        </p>
+                      </div>
 
                       {/* Status Summary */}
                       <div className="bg-gradient-to-r from-gray-900/30 to-gray-800/30 rounded-xl p-4 border border-gray-500/20">
                         <div className="text-lg font-bold text-gray-300 mb-1">
-                          {userData.hasSufficientBalance && !userData.hasParticipatedThisWeek 
+                          {userData.hasSufficientBalance && userData.remainingConversations > 0
                             ? 'Ready to Cast' 
                             : !userData.hasSufficientBalance 
                               ? 'Need Balance' 
-                              : 'Already Participated'}
+                              : 'No Conversations Left'}
                         </div>
                         <p className="text-gray-300 text-sm font-medium">Current Status</p>
                         <p className="text-gray-400 text-xs mt-1">
@@ -857,7 +1168,7 @@ export default function Home() {
                 </div>
               </div>
               
-                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                              <div>
                                <p className="text-gray-400 mb-1">Cast Hash:</p>
                                <div className="flex items-center gap-2">
@@ -882,9 +1193,15 @@ export default function Home() {
                                </p>
                              </div>
                              <div>
-                               <p className="text-gray-400 mb-1">User Address:</p>
+                               <p className="text-gray-400 mb-1">Conversation ID:</p>
                                <p className="text-white font-mono text-xs break-all">
-                                 {participation.user}
+                                 {participation.conversationId}
+                               </p>
+                             </div>
+                             <div>
+                               <p className="text-gray-400 mb-1">Farcaster ID:</p>
+                               <p className="text-white font-mono text-xs">
+                                 {participation.fid}
                                </p>
                              </div>
                              <div>
@@ -893,6 +1210,24 @@ export default function Home() {
                                  {new Date(participation.timestamp * 1000).toLocaleString()}
                                </p>
                 </div>
+                             <div>
+                               <p className="text-gray-400 mb-1">AI Score:</p>
+                               <div className="flex items-center gap-2">
+                                 <span className="text-white font-semibold">
+                                   {participation.isEvaluated ? `${participation.aiScore}/50` : 'Not evaluated'}
+                                 </span>
+                                 {participation.isEvaluated && (
+                                   <div className={`px-2 py-1 rounded text-xs ${
+                                     participation.aiScore >= 40 ? 'bg-green-900 text-green-300' :
+                                     participation.aiScore >= 25 ? 'bg-yellow-900 text-yellow-300' :
+                                     'bg-red-900 text-red-300'
+                                   }`}>
+                                     {participation.aiScore >= 40 ? 'Excellent' :
+                                      participation.aiScore >= 25 ? 'Good' : 'Needs Work'}
+                                   </div>
+                                 )}
+                               </div>
+                             </div>
                 <div>
                                <p className="text-gray-400 mb-1">Status:</p>
                                <div className="flex items-center gap-2">
@@ -953,31 +1288,49 @@ export default function Home() {
                {/* Data Context Explanation */}
               <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600/20">
                 <h4 className="font-semibold text-white mb-3">📋 Data Context & Explanation</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div>
                     <h5 className="font-medium text-blue-400 mb-2">getCommonData() - System Overview</h5>
                     <ul className="text-gray-300 space-y-1">
+                      <li>• <strong>Total Prize Pool:</strong> All-time cumulative USDC</li>
                       <li>• <strong>Current Week Prize Pool:</strong> USDC collected this week</li>
-                      <li>• <strong>Current Week:</strong> Weekly cycle number</li>
-                      <li>• <strong>Participants:</strong> Unique users this week</li>
-                      <li>• <strong>Time Remaining:</strong> Until next winner selection</li>
-                      <li>• <strong>Week Start Time:</strong> When cycle began</li>
                       <li>• <strong>Rollover Amount:</strong> 10% from previous week</li>
-                      <li>• <strong>Total Prize Pool:</strong> All-time cumulative</li>
-                      <li>• <strong>Current Winner:</strong> Selected by admin</li>
+                      <li>• <strong>Total Contributions:</strong> Direct prize pool contributions</li>
+                      <li>• <strong>Protocol Fees:</strong> Total fees collected</li>
+                      <li>• <strong>Cast Cost:</strong> Current cost per cast</li>
+                      <li>• <strong>Current Week:</strong> Weekly cycle number</li>
+                      <li>• <strong>Week Times:</strong> Start and end timestamps</li>
+                      <li>• <strong>Participants:</strong> Unique users this week</li>
+                      <li>• <strong>Current Winner:</strong> Selected winner (if any)</li>
+                      <li>• <strong>Character Info:</strong> Basic AI character info</li>
                     </ul>
-                </div>
-                <div>
+                  </div>
+                  <div>
+                    <h5 className="font-medium text-violet-400 mb-2">getCurrentCharacter() - AI Character</h5>
+                    <ul className="text-gray-300 space-y-1">
+                      <li>• <strong>Character Name:</strong> AI persona name (e.g., "Jordan Belfort")</li>
+                      <li>• <strong>Task Description:</strong> What users need to accomplish</li>
+                      <li>• <strong>Trait Names:</strong> Character attributes (up to 5)</li>
+                      <li>• <strong>Trait Values:</strong> Trait strengths (1-10 scale)</li>
+                      <li>• <strong>Trait Count:</strong> Number of active traits</li>
+                      <li>• <strong>Is Set:</strong> Whether character is configured</li>
+                      <li>• <strong>Weekly Rotation:</strong> New character each week</li>
+                      <li>• <strong>AI Evaluation:</strong> Scores based on character traits</li>
+                    </ul>
+                  </div>
+                  <div>
                     <h5 className="font-medium text-green-400 mb-2">getUserData() - Personal Data</h5>
                     <ul className="text-gray-300 space-y-1">
                       <li>• <strong>Contract Balance:</strong> Your USDC in contract</li>
-                      <li>• <strong>Sufficient Balance:</strong> Can participate (≥0.01 USDC)</li>
-                      <li>• <strong>Participated This Week:</strong> Already cast this week</li>
-                      <li>• <strong>Participation Count:</strong> Total casts made</li>
-                      <li>• <strong>Can Participate:</strong> Ready to cast now</li>
-                      <li>• <strong>Total Spent:</strong> USDC spent on participations</li>
-                      <li>• <strong>Recent Activities:</strong> Participation records</li>
-                      <li>• <strong>Status:</strong> Current eligibility</li>
+                      <li>• <strong>Sufficient Balance:</strong> Can participate (≥cast cost)</li>
+                      <li>• <strong>Participated This Week:</strong> Has any casts this week</li>
+                      <li>• <strong>Participation Count:</strong> Total casts made this week</li>
+                      <li>• <strong>Conversation Count:</strong> Active conversations this week</li>
+                      <li>• <strong>Remaining Conversations:</strong> Max 3 per week allowed</li>
+                      <li>• <strong>Best AI Score:</strong> Highest evaluation score (0-50)</li>
+                      <li>• <strong>Best Conversation ID:</strong> ID of best scored conversation</li>
+                      <li>• <strong>Total Contributions:</strong> Direct prize pool contributions</li>
+                      <li>• <strong>Participation History:</strong> Detailed cast records</li>
                     </ul>
                   </div>
                 </div>
