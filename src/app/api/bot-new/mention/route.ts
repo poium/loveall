@@ -395,7 +395,11 @@ async function checkSingleAddressBalance(userAddress: string): Promise<{
     try {
         console.log('Checking user data for address:', userAddress);
         console.log('📋 Using contract address:', CONTRACT_ADDRESS);
-        console.log('🌐 Using RPC endpoint:', provider.connection.url);
+        try {
+            console.log('🌐 Using RPC endpoint:', provider._getConnection().url);
+        } catch (e) {
+            console.log('🌐 Using RPC endpoint: [Unable to get URL]');
+        }
         
         // Create contract instance
         let contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
@@ -415,7 +419,11 @@ async function checkSingleAddressBalance(userAddress: string): Promise<{
                 if (balance < 100n && remainingConversations === 0n && attempt < 3) {
                     console.log('⚠️ Stale data detected! Balance:', balance.toString(), 'wei. Switching RPC...');
                     provider = switchRpcEndpoint();
-                    console.log('🔄 Switched to RPC:', provider.connection.url);
+                    try {
+                        console.log('🔄 Switched to RPC:', provider._getConnection().url);
+                    } catch (e) {
+                        console.log('🔄 Switched to RPC: [Unable to get URL]');
+                    }
                     console.log('📋 Re-creating contract with address:', CONTRACT_ADDRESS);
                     contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
                     continue; // Retry with new RPC
@@ -427,7 +435,11 @@ async function checkSingleAddressBalance(userAddress: string): Promise<{
                 if (attempt === 2) {
                     console.log('Switching RPC endpoint due to error...');
                     provider = switchRpcEndpoint();
-                    console.log('🔄 Switched to RPC:', provider.connection.url);
+                    try {
+                        console.log('🔄 Switched to RPC:', provider._getConnection().url);
+                    } catch (e) {
+                        console.log('🔄 Switched to RPC: [Unable to get URL]');
+                    }
                     console.log('📋 Re-creating contract with address:', CONTRACT_ADDRESS);
                     contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
                 }
@@ -455,7 +467,11 @@ async function checkSingleAddressBalance(userAddress: string): Promise<{
         
         console.log('🔍 Raw balance from contract:', balance.toString(), 'wei');
         console.log('📋 Balance source contract:', CONTRACT_ADDRESS);
-        console.log('🌐 Balance source RPC:', provider.connection.url);
+        try {
+            console.log('🌐 Balance source RPC:', provider._getConnection().url);
+        } catch (e) {
+            console.log('🌐 Balance source RPC: [Unable to get URL]');
+        }
         const balanceFormatted = ethers.formatUnits(balance, 6);
         console.log('🔍 Balance formatted with 6 decimals:', balanceFormatted, 'USDC');
         
