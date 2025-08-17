@@ -17,7 +17,17 @@
     },
     {
         "inputs": [],
-        "name": "AlreadyParticipated",
+        "name": "CastNotEvaluated",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "CharacterAlreadySet",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "ConversationNotFound",
         "type": "error"
     },
     {
@@ -37,7 +47,37 @@
     },
     {
         "inputs": [],
+        "name": "InvalidAIScore",
+        "type": "error"
+    },
+    {
+        "inputs": [],
         "name": "InvalidAmount",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidTaskLength",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidTraitCount",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "MaxCastsPerConversationReached",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "MaxConversationsReached",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "NoEvaluatedConversations",
         "type": "error"
     },
     {
@@ -94,6 +134,37 @@
             {
                 "indexed": false,
                 "internalType": "uint256",
+                "name": "fid",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "bytes32",
+                "name": "conversationId",
+                "type": "bytes32"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "aiScore",
+                "type": "uint256"
+            }
+        ],
+        "name": "AIEvaluationCompleted",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "user",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
                 "name": "amount",
                 "type": "uint256"
             }
@@ -124,10 +195,35 @@
         "anonymous": false,
         "inputs": [
             {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "oldCost",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "newCost",
+                "type": "uint256"
+            }
+        ],
+        "name": "CastCostUpdated",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
                 "indexed": true,
                 "internalType": "address",
                 "name": "user",
                 "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "fid",
+                "type": "uint256"
             },
             {
                 "indexed": false,
@@ -137,12 +233,55 @@
             },
             {
                 "indexed": false,
+                "internalType": "bytes32",
+                "name": "conversationId",
+                "type": "bytes32"
+            },
+            {
+                "indexed": false,
                 "internalType": "uint256",
                 "name": "cost",
                 "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "string",
+                "name": "castContent",
+                "type": "string"
             }
         ],
         "name": "CastParticipated",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "week",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
+            },
+            {
+                "indexed": false,
+                "internalType": "string",
+                "name": "task",
+                "type": "string"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint8",
+                "name": "traitCount",
+                "type": "uint8"
+            }
+        ],
+        "name": "CharacterSet",
         "type": "event"
     },
     {
@@ -216,9 +355,53 @@
                 "internalType": "uint256",
                 "name": "rollover",
                 "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "protocolFee",
+                "type": "uint256"
             }
         ],
         "name": "PrizeDistributed",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "contributor",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+            }
+        ],
+        "name": "PrizePoolContribution",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "totalEvaluated",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "topScoresCount",
+                "type": "uint256"
+            }
+        ],
+        "name": "TopScoresRecorded",
         "type": "event"
     },
     {
@@ -261,7 +444,33 @@
     },
     {
         "inputs": [],
-        "name": "CAST_COST",
+        "name": "MAX_CASTS_PER_CONVERSATION",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "MAX_CONVERSATIONS_PER_USER_PER_WEEK",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "PROTOCOL_FEE_PERCENTAGE",
         "outputs": [
             {
                 "internalType": "uint256",
@@ -313,6 +522,56 @@
     },
     {
         "inputs": [],
+        "name": "castCost",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+            }
+        ],
+        "name": "contributeToPrizePool",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            },
+            {
+                "internalType": "bytes32",
+                "name": "",
+                "type": "bytes32"
+            }
+        ],
+        "name": "conversationCastCount",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
         "name": "currentWeek",
         "outputs": [
             {
@@ -352,25 +611,6 @@
         "type": "function"
     },
     {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "user",
-                "type": "address"
-            }
-        ],
-        "name": "getBalance",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
         "inputs": [],
         "name": "getCommonData",
         "outputs": [
@@ -389,6 +629,21 @@
                     {
                         "internalType": "uint256",
                         "name": "rolloverAmount",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "totalContributions",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "totalProtocolFees",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "castCost",
                         "type": "uint256"
                     },
                     {
@@ -420,6 +675,21 @@
                         "internalType": "uint256",
                         "name": "currentWeekPrize",
                         "type": "uint256"
+                    },
+                    {
+                        "internalType": "string",
+                        "name": "characterName",
+                        "type": "string"
+                    },
+                    {
+                        "internalType": "string",
+                        "name": "characterTask",
+                        "type": "string"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "characterIsSet",
+                        "type": "bool"
                     }
                 ],
                 "internalType": "struct LoveallPrizePool.CommonData",
@@ -431,13 +701,66 @@
         "type": "function"
     },
     {
-        "inputs": [],
-        "name": "getCurrentPrizePool",
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "conversationId",
+                "type": "bytes32"
+            }
+        ],
+        "name": "getConversationParticipations",
         "outputs": [
             {
-                "internalType": "uint256",
+                "components": [
+                    {
+                        "internalType": "address",
+                        "name": "user",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "fid",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "castHash",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "conversationId",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "timestamp",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "weekNumber",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "usdcAmount",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "aiScore",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "isEvaluated",
+                        "type": "bool"
+                    }
+                ],
+                "internalType": "struct LoveallPrizePool.CastParticipation[]",
                 "name": "",
-                "type": "uint256"
+                "type": "tuple[]"
             }
         ],
         "stateMutability": "view",
@@ -445,12 +768,97 @@
     },
     {
         "inputs": [],
-        "name": "getCurrentWeek",
+        "name": "getCurrentCharacter",
         "outputs": [
             {
-                "internalType": "uint256",
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "task",
+                "type": "string"
+            },
+            {
+                "internalType": "string[5]",
+                "name": "traitNames",
+                "type": "string[5]"
+            },
+            {
+                "internalType": "uint8[5]",
+                "name": "traitValues",
+                "type": "uint8[5]"
+            },
+            {
+                "internalType": "uint8",
+                "name": "traitCount",
+                "type": "uint8"
+            },
+            {
+                "internalType": "bool",
+                "name": "isSet",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getCurrentWeekParticipations",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "address",
+                        "name": "user",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "fid",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "castHash",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "conversationId",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "timestamp",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "weekNumber",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "usdcAmount",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "aiScore",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "isEvaluated",
+                        "type": "bool"
+                    }
+                ],
+                "internalType": "struct LoveallPrizePool.CastParticipation[]",
                 "name": "",
-                "type": "uint256"
+                "type": "tuple[]"
             }
         ],
         "stateMutability": "view",
@@ -489,6 +897,31 @@
                         "type": "uint256"
                     },
                     {
+                        "internalType": "uint256",
+                        "name": "conversationCount",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "remainingConversations",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "bestScore",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "bestConversationId",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "totalContributions",
+                        "type": "uint256"
+                    },
+                    {
                         "components": [
                             {
                                 "internalType": "address",
@@ -496,8 +929,18 @@
                                 "type": "address"
                             },
                             {
+                                "internalType": "uint256",
+                                "name": "fid",
+                                "type": "uint256"
+                            },
+                            {
                                 "internalType": "bytes32",
                                 "name": "castHash",
+                                "type": "bytes32"
+                            },
+                            {
+                                "internalType": "bytes32",
+                                "name": "conversationId",
                                 "type": "bytes32"
                             },
                             {
@@ -513,6 +956,11 @@
                             {
                                 "internalType": "uint256",
                                 "name": "usdcAmount",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "aiScore",
                                 "type": "uint256"
                             },
                             {
@@ -536,12 +984,22 @@
     },
     {
         "inputs": [],
-        "name": "getRolloverAmount",
+        "name": "getUnevaluatedConversationsForAI",
         "outputs": [
             {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
+                "internalType": "bytes32[]",
+                "name": "conversationIds",
+                "type": "bytes32[]"
+            },
+            {
+                "internalType": "address[]",
+                "name": "users",
+                "type": "address[]"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "fids",
+                "type": "uint256[]"
             }
         ],
         "stateMutability": "view",
@@ -580,6 +1038,31 @@
                         "type": "uint256"
                     },
                     {
+                        "internalType": "uint256",
+                        "name": "conversationCount",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "remainingConversations",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "bestScore",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "bestConversationId",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "totalContributions",
+                        "type": "uint256"
+                    },
+                    {
                         "components": [
                             {
                                 "internalType": "address",
@@ -587,8 +1070,18 @@
                                 "type": "address"
                             },
                             {
+                                "internalType": "uint256",
+                                "name": "fid",
+                                "type": "uint256"
+                            },
+                            {
                                 "internalType": "bytes32",
                                 "name": "castHash",
+                                "type": "bytes32"
+                            },
+                            {
+                                "internalType": "bytes32",
+                                "name": "conversationId",
                                 "type": "bytes32"
                             },
                             {
@@ -604,6 +1097,11 @@
                             {
                                 "internalType": "uint256",
                                 "name": "usdcAmount",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "aiScore",
                                 "type": "uint256"
                             },
                             {
@@ -626,26 +1124,44 @@
         "type": "function"
     },
     {
-        "inputs": [],
-        "name": "getWeekEndTime",
-        "outputs": [
+        "inputs": [
             {
                 "internalType": "uint256",
-                "name": "",
+                "name": "week",
                 "type": "uint256"
             }
         ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "getWeeklyPrizePool",
+        "name": "getWeeklyCharacter",
         "outputs": [
             {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "task",
+                "type": "string"
+            },
+            {
+                "internalType": "string[5]",
+                "name": "traitNames",
+                "type": "string[5]"
+            },
+            {
+                "internalType": "uint8[5]",
+                "name": "traitValues",
+                "type": "uint8[5]"
+            },
+            {
+                "internalType": "uint8",
+                "name": "traitCount",
+                "type": "uint8"
+            },
+            {
+                "internalType": "bool",
+                "name": "isSet",
+                "type": "bool"
             }
         ],
         "stateMutability": "view",
@@ -686,49 +1202,6 @@
         "type": "function"
     },
     {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            },
-            {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "name": "hasParticipatedThisWeek",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "user",
-                "type": "address"
-            }
-        ],
-        "name": "hasSufficientBalance",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
         "inputs": [],
         "name": "owner",
         "outputs": [
@@ -749,9 +1222,24 @@
                 "type": "address"
             },
             {
+                "internalType": "uint256",
+                "name": "fid",
+                "type": "uint256"
+            },
+            {
                 "internalType": "bytes32",
                 "name": "castHash",
                 "type": "bytes32"
+            },
+            {
+                "internalType": "bytes32",
+                "name": "conversationId",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "string",
+                "name": "castContent",
+                "type": "string"
             }
         ],
         "name": "participateInCast",
@@ -780,6 +1268,34 @@
         "type": "function"
     },
     {
+        "inputs": [
+            {
+                "internalType": "address[]",
+                "name": "topUsers",
+                "type": "address[]"
+            },
+            {
+                "internalType": "bytes32[]",
+                "name": "topConversationIds",
+                "type": "bytes32[]"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "topAiScores",
+                "type": "uint256[]"
+            },
+            {
+                "internalType": "uint256",
+                "name": "totalEvaluated",
+                "type": "uint256"
+            }
+        ],
+        "name": "recordTopAIScores",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
         "inputs": [],
         "name": "renounceOwnership",
         "outputs": [],
@@ -800,14 +1316,54 @@
         "type": "function"
     },
     {
+        "inputs": [],
+        "name": "selectWinnerByAIScore",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
         "inputs": [
             {
-                "internalType": "address",
-                "name": "winner",
-                "type": "address"
+                "internalType": "uint256",
+                "name": "newCastCost",
+                "type": "uint256"
             }
         ],
-        "name": "setWeeklyWinner",
+        "name": "setCastCost",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "task",
+                "type": "string"
+            },
+            {
+                "internalType": "string[5]",
+                "name": "traitNames",
+                "type": "string[5]"
+            },
+            {
+                "internalType": "uint8[5]",
+                "name": "traitValues",
+                "type": "uint8[5]"
+            },
+            {
+                "internalType": "uint8",
+                "name": "traitCount",
+                "type": "uint8"
+            }
+        ],
+        "name": "setWeeklyCharacter",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -834,7 +1390,33 @@
     },
     {
         "inputs": [],
+        "name": "totalContributions",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
         "name": "totalPrizePool",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "totalProtocolFees",
         "outputs": [
             {
                 "internalType": "uint256",
@@ -898,6 +1480,49 @@
         "type": "function"
     },
     {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "name": "userContributions",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            },
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "name": "userConversationCount",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
         "inputs": [],
         "name": "weekStartTime",
         "outputs": [
@@ -905,6 +1530,45 @@
                 "internalType": "uint256",
                 "name": "",
                 "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "weeklyCharacters",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "task",
+                "type": "string"
+            },
+            {
+                "internalType": "uint8",
+                "name": "traitCount",
+                "type": "uint8"
+            },
+            {
+                "internalType": "uint256",
+                "name": "weekNumber",
+                "type": "uint256"
+            },
+            {
+                "internalType": "bool",
+                "name": "isSet",
+                "type": "bool"
             }
         ],
         "stateMutability": "view",
@@ -960,8 +1624,18 @@
                 "type": "address"
             },
             {
+                "internalType": "uint256",
+                "name": "fid",
+                "type": "uint256"
+            },
+            {
                 "internalType": "bytes32",
                 "name": "castHash",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "bytes32",
+                "name": "conversationId",
                 "type": "bytes32"
             },
             {
@@ -977,6 +1651,11 @@
             {
                 "internalType": "uint256",
                 "name": "usdcAmount",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "aiScore",
                 "type": "uint256"
             },
             {
