@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
 import { getBotUserData } from '@/lib/bot-data';
 
+// Force cache clearing for debugging
+import { clearUserCache } from '@/lib/database';
+
 // Smart Contract Configuration
 const CONTRACT_ADDRESS = '0x79C495b3F99EeC74ef06C79677Aee352F40F1De5';
 const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
@@ -60,6 +63,10 @@ export async function GET(request: NextRequest) {
         }
 
         console.log('Checking balance for address:', address);
+
+        // Force clear cache for this specific address to ensure fresh data
+        clearUserCache(address);
+        console.log('🧹 Cleared cache for', address);
 
         // Use cache-first approach (same as bot for consistency)
         const userData = await getBotUserData(address);
