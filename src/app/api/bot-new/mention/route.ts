@@ -739,8 +739,7 @@ export async function POST(request: NextRequest) {
                         const shortAddresses = balanceCheck.allAddresses.map(addr => 
                             `${shortenAddress(addr.address)} (${addr.balance} USDC)`
                         ).join(', ');
-                            insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your contract balance to participate. Your contract balances: ${shortAddresses}. Please top up your contract balance on our website and try again! 💫`;
-                        }
+                        insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your contract balance to participate. Your contract balances: ${shortAddresses}. Please top up your contract balance on our website and try again! 💫`;
                     }
                     
                     try {
