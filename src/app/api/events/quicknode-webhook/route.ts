@@ -22,23 +22,83 @@ export async function POST(request: NextRequest) {
   try {
     const payload = await request.json();
     
-    if (!payload.data || payload.data.length === 0) {
-      // Don't log empty batches to reduce spam - return early without logging
-      return NextResponse.json({ status: 'success', processed: 0 });
+    // Extract logs from the triple-nested structure: data -> transaction groups -> [[], [logs...]]
+    let allLogs: any[] = [];
+    
+    if (payload.data && Array.isArray(payload.data)) {
+      payload.data.forEach((transactionGroup: any) => {
+        if (Array.isArray(transactionGroup)) {
+          // Each transaction group contains [[], [logs...]]
+          transactionGroup.forEach((subArray: any) => {
+            if (Array.isArray(subArray)) {
+              // This is the actual logs array (usually the second sub-array)
+              subArray.forEach((log: any) => {
+                if (log && typeof log === 'object' && log.address) {
+                  allLogs.push(log);
+                }
+              });
+            }
+          });
+        }
+      });
     }
     
-    // Only log when we have events
-    console.log('📡 QuickNode webhook received with', payload.data.length, 'events');
+    // Filter logs to only include relevant events
+    const filteredLogs = allLogs.filter(log => {
+      if (!log || !log.address) return false;
+      
+      const address = log.address.toLowerCase();
+      const yourContract = YOUR_CONTRACT.toLowerCase();
+      const usdcContract = USDC_CONTRACT.toLowerCase();
+      
+      // For your contract - keep all events
+      if (address === yourContract) {
+        return true;
+      }
+      
+      // For USDC contract - only keep transfers involving your contract
+      if (address === usdcContract) {
+        // Check if it's a Transfer event (topic[0] = Transfer signature)
+        const isTransfer = log.topics && log.topics[0] === TRANSFER_TOPIC;
+        
+        if (isTransfer && log.topics.length >= 3) {
+          // Extract from and to addresses from topics
+          const from = '0x' + log.topics[1].slice(-40).toLowerCase();
+          const to = '0x' + log.topics[2].slice(-40).toLowerCase();
+          
+          // Only keep if your contract is involved
+          return from === yourContract || to === yourContract;
+        }
+      }
+      
+      return false;
+    });
+    
+    if (filteredLogs.length === 0) {
+      // Log when we extract events but none are relevant
+      if (allLogs.length > 0) {
+        console.log(`📡 QuickNode webhook received ${allLogs.length} events but none are relevant (filtered out)`);
+      }
+      return NextResponse.json({ 
+        status: 'success', 
+        processed: 0,
+        extracted: allLogs.length,
+        filtered: 0 
+      });
+    }
+    
+    // Only log when we have relevant events
+    console.log(`📡 QuickNode webhook received ${allLogs.length} events, ${filteredLogs.length} relevant (after filtering)`);
     console.log('📦 Block range:', payload.metadata?.batch_start_range, 'to', payload.metadata?.batch_end_range);
     
-    // Debug the first event structure
-    if (payload.data.length > 0) {
-      console.log('🔍 First event structure:', JSON.stringify(payload.data[0], null, 2));
+    // Debug the first relevant event structure
+    if (filteredLogs.length > 0) {
+      console.log('🔍 First relevant event structure:', JSON.stringify(filteredLogs[0], null, 2));
     }
     
     let processedEvents = 0;
     
-    for (const log of payload.data) {
+    for (const log of filteredLogs) {
       try {
         await processEvent(log);
         processedEvents++;
@@ -47,12 +107,14 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    console.log(`✅ Processed ${processedEvents} events`);
+    console.log(`✅ Processed ${processedEvents} events out of ${filteredLogs.length} relevant events`);
     
     return NextResponse.json({ 
       status: 'success', 
       processed: processedEvents,
-      total: payload.data.length 
+      total: filteredLogs.length,
+      extracted: allLogs.length,
+      originalStructureSize: payload.data?.length || 0
     });
     
   } catch (error) {
@@ -99,7 +161,15 @@ async function processUSDCTransfer(log: any) {
   const fromAddress = '0x' + from.slice(-40);
   const toAddress = '0x' + to.slice(-40);
   
-  console.log('💰 USDC Transfer:', {
+  // Only process transfers involving your contract
+  const isRelevant = fromAddress.toLowerCase() === YOUR_CONTRACT.toLowerCase() || 
+                    toAddress.toLowerCase() === YOUR_CONTRACT.toLowerCase();
+  
+  if (!isRelevant) {
+    return; // Skip irrelevant transfers
+  }
+  
+  console.log('💰 USDC Transfer (RELEVANT):', {
     from: fromAddress,
     to: toAddress,
     amount: amount + ' USDC',
