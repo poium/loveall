@@ -14,18 +14,18 @@ const config = new Configuration({
 const neynar = new NeynarAPIClient(config);
 
 // Smart Contract Configuration
-const CONTRACT_ADDRESS = '0xE05efF71D71850c0FEc89660DC6588787312e453'; // Your deployed contract
+const CONTRACT_ADDRESS = '0x79C495b3F99EeC74ef06C79677Aee352F40F1De5'; // LoveallPrizePool on Base Mainnet
 const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'; // USDC on Base
-const CAST_COST = ethers.parseUnits('0.01', 6); // 1 cent USDC (6 decimals)
+// Cast cost is now dynamic and fetched from contract
 
-// Contract ABI (simplified for the functions we need)
+// Contract ABI (updated for new contract functions)
 const CONTRACT_ABI = [
-    'function getUserData(address user) external view returns (uint256 balance, uint256 totalCasts, uint256 lastCastTime, bool isActive)',
-    'function participateInCast(address user, bytes32 castHash) external',
-    'function getCommonData() external view returns (uint256 currentWeek, uint256 currentPrizePool, uint256 totalParticipants, uint256 weekStartTime)',
-    'function owner() external view returns (address)',
-    'function getBalance(address user) external view returns (uint256)',
-    'function hasParticipatedThisWeek(address user) external view returns (bool)'
+    'function getUserData(address user) external view returns (tuple(uint256 balance, bool hasSufficientBalance, bool hasParticipatedThisWeek, uint256 participationsCount, uint256 conversationCount, uint256 remainingConversations, uint256 bestScore, bytes32 bestConversationId, uint256 totalContributions))',
+    'function participateInCast(address user, uint256 fid, bytes32 castHash, bytes32 conversationId, string castContent) external',
+    'function getCommonData() external view returns (tuple(uint256 totalPrizePool, uint256 currentWeekPrizePool, uint256 rolloverAmount, uint256 totalContributions, uint256 totalProtocolFees, uint256 castCost, uint256 currentWeek, uint256 weekStartTime, uint256 weekEndTime, uint256 currentWeekParticipantsCount, address currentWeekWinner, uint256 currentWeekPrize, string characterName, string characterTask, bool characterIsSet))',
+    'function getCurrentCharacter() external view returns (tuple(string name, string task, string[5] traitNames, uint8[5] traitValues, uint8 traitCount, bool isSet))',
+    'function setCastCost(uint256 newCastCost) external',
+    'function owner() external view returns (address)'
 ];
 
 // USDC ABI (simplified)
@@ -33,6 +33,33 @@ const USDC_ABI = [
     'function balanceOf(address account) external view returns (uint256)',
     'function allowance(address owner, address spender) external view returns (uint256)'
 ];
+
+// Helper function to get user's FID from address
+async function getUserFid(userAddress: string): Promise<number | null> {
+    try {
+        console.log('Getting FID for address:', userAddress);
+        const response = await neynar.fetchBulkUsersByEthOrSolAddress({ addresses: [userAddress] });
+        
+        if (response && response[userAddress] && response[userAddress].length > 0) {
+            const fid = response[userAddress][0].fid;
+            console.log('Found FID:', fid, 'for address:', userAddress);
+            return fid;
+        }
+        
+        console.log('No FID found for address:', userAddress);
+        return null;
+    } catch (error) {
+        console.error('Error getting FID for address:', userAddress, error);
+        return null;
+    }
+}
+
+// Helper function to generate conversation ID from thread
+function getConversationId(castData: any): string {
+    // Use thread_hash if available (for replies), otherwise use the cast hash (for original casts)
+    const conversationRoot = castData.thread_hash || castData.hash;
+    return ethers.keccak256(ethers.toUtf8Bytes(conversationRoot));
+}
 
 // Initialize provider with fallback RPC endpoints
 const RPC_ENDPOINTS = [
@@ -356,87 +383,90 @@ function getUserVerifiedAddress(castData: any): string | null {
     return addresses.length > 0 ? addresses[0] : null;
 }
 
-// Check user's contract balance for a single address
-async function checkSingleAddressBalance(userAddress: string): Promise<{ hasBalance: boolean; balance: string; hasParticipated: boolean; error?: string }> {
+// Check user's contract balance and participation status
+async function checkSingleAddressBalance(userAddress: string): Promise<{ 
+    hasBalance: boolean; 
+    balance: string; 
+    hasParticipated: boolean; 
+    conversationCount: number;
+    remainingConversations: number;
+    canParticipate: boolean;
+    error?: string 
+}> {
     try {
-        console.log('Checking contract balance for address:', userAddress);
+        console.log('Checking user data for address:', userAddress);
         
-        // Check contract balance with RPC fallback
-        let contractBalance = ethers.parseUnits('0', 6);
-        let balanceFormatted = '0';
+        // Create contract instance
+        let contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
         
+        // Get comprehensive user data with retry logic
+        let userData: any = null;
         for (let attempt = 1; attempt <= 3; attempt++) {
             try {
-                contractBalance = await contract.getBalance(userAddress);
-                balanceFormatted = ethers.formatUnits(contractBalance, 6);
-                console.log('Contract balance:', balanceFormatted);
+                userData = await contract.getUserData(userAddress);
+                console.log('User data retrieved:', userData);
                 break;
-            } catch (balanceError: any) {
-                console.log(`Contract balance check failed (attempt ${attempt}) for address:`, userAddress, 'Error:', balanceError);
+            } catch (dataError: any) {
+                console.log(`User data check failed (attempt ${attempt}) for address:`, userAddress, 'Error:', dataError);
                 
                 if (attempt === 2) {
-                    // Switch RPC endpoint on 2nd attempt
-                    console.log('Switching RPC endpoint for contract balance check...');
+                    console.log('Switching RPC endpoint...');
                     provider = switchRpcEndpoint();
                     contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
                 }
                 
                 if (attempt === 3) {
-                    // Final attempt failed, assume 0 balance
-                    console.log('All contract balance check attempts failed - assuming 0 balance');
-                    contractBalance = ethers.parseUnits('0', 6);
-                    balanceFormatted = '0';
+                    throw dataError;
                 } else {
                     await new Promise(resolve => setTimeout(resolve, 1000));
                 }
             }
         }
         
-        // Check if user has already participated this week
-        let hasParticipated = false;
-        for (let attempt = 1; attempt <= 3; attempt++) {
-            try {
-                hasParticipated = await contract.hasParticipatedThisWeek(userAddress);
-                console.log('Has participated this week:', hasParticipated);
-                break;
-            } catch (participationError: any) {
-                console.log(`Participation check failed (attempt ${attempt}) for address:`, userAddress, 'Error:', participationError);
-                
-                if (attempt === 2) {
-                    console.log('Switching RPC endpoint for participation check...');
-                    provider = switchRpcEndpoint();
-                    contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
-                }
-                
-                if (attempt === 3) {
-                    console.log('All participation check attempts failed - assuming not participated');
-                    hasParticipated = false;
-                } else {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                }
-            }
-        }
+        // Extract data from the tuple response
+        const [
+            balance,
+            hasSufficientBalance,
+            hasParticipatedThisWeek,
+            participationsCount,
+            conversationCount,
+            remainingConversations,
+            bestScore,
+            bestConversationId,
+            totalContributions
+        ] = userData;
         
-        // Check if user has enough balance and hasn't participated this week
-        const hasBalance = contractBalance >= CAST_COST && !hasParticipated;
+        const balanceFormatted = ethers.formatUnits(balance, 6);
+        
+        // User can participate if they have sufficient balance and remaining conversation slots
+        const canParticipate = hasSufficientBalance && remainingConversations > 0;
         
         console.log('Final check for address:', userAddress);
-        console.log('- Contract Balance:', balanceFormatted, 'USDC (>=', ethers.formatUnits(CAST_COST, 6), 'USDC):', contractBalance >= CAST_COST);
-        console.log('- Has participated this week:', hasParticipated);
-        console.log('- Can participate:', hasBalance);
+        console.log('- Balance:', balanceFormatted, 'USDC');
+        console.log('- Has sufficient balance:', hasSufficientBalance);
+        console.log('- Has participated this week:', hasParticipatedThisWeek);
+        console.log('- Conversation count:', conversationCount.toString());
+        console.log('- Remaining conversations:', remainingConversations.toString());
+        console.log('- Can participate:', canParticipate);
         
         return {
-            hasBalance,
+            hasBalance: canParticipate,
             balance: balanceFormatted,
-            hasParticipated
+            hasParticipated: hasParticipatedThisWeek,
+            conversationCount: Number(conversationCount),
+            remainingConversations: Number(remainingConversations),
+            canParticipate
         };
     } catch (error) {
-        console.error('Error checking user contract balance:', error);
+        console.error('Error checking user data:', error);
         return {
             hasBalance: false,
             balance: '0',
             hasParticipated: false,
-            error: error instanceof Error ? error.message : 'Unknown error'
+            conversationCount: 0,
+            remainingConversations: 0,
+            canParticipate: false,
+            error: 'Failed to check user data'
         };
     }
 }
@@ -492,9 +522,9 @@ async function checkUserBalance(userAddresses: string[]): Promise<{
 }
 
 // Record participation in the smart contract
-async function recordParticipation(userAddress: string, castHash: string): Promise<{ success: boolean; error?: string; txHash?: string }> {
+async function recordParticipation(userAddress: string, castData: any): Promise<{ success: boolean; error?: string; txHash?: string }> {
     try {
-        console.log('Recording participation for user:', userAddress, 'cast:', castHash);
+        console.log('Recording participation for user:', userAddress, 'cast:', castData.hash);
         
         // Check if we have the bot's private key
         const botPrivateKey = process.env.PRIVATE_KEY;
@@ -506,6 +536,20 @@ async function recordParticipation(userAddress: string, castHash: string): Promi
             };
         }
         
+        // Get user's FID
+        const userFid = await getUserFid(userAddress);
+        if (!userFid) {
+            console.error('Could not get FID for user:', userAddress);
+            return {
+                success: false,
+                error: 'Could not get user FID'
+            };
+        }
+        
+        // Generate conversation ID
+        const conversationId = getConversationId(castData);
+        console.log('Conversation ID:', conversationId);
+        
         // Create bot wallet
         const botWallet = new ethers.Wallet(botPrivateKey, provider);
         console.log('Bot wallet address:', botWallet.address);
@@ -513,12 +557,25 @@ async function recordParticipation(userAddress: string, castHash: string): Promi
         // Create contract instance with bot wallet
         const contractWithSigner = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, botWallet);
         
-        // Call the participateInCast function
+        // Call the participateInCast function with new parameters
         console.log('Calling participateInCast function...');
-        // For contract storage, we need a bytes32 hash
-        // We'll use keccak256 of the original cast hash to create a unique 32-byte identifier
-        const castHashBytes32 = ethers.keccak256(ethers.toUtf8Bytes(castHash));
-        const tx = await contractWithSigner.participateInCast(userAddress, castHashBytes32);
+        console.log('Parameters:');
+        console.log('- User:', userAddress);
+        console.log('- FID:', userFid);
+        console.log('- Cast Hash:', castData.hash);
+        console.log('- Conversation ID:', conversationId);
+        console.log('- Cast Content:', castData.text);
+        
+        // Convert cast hash to bytes32 if needed
+        const castHashBytes32 = castData.hash.startsWith('0x') ? castData.hash : ethers.keccak256(ethers.toUtf8Bytes(castData.hash));
+        
+        const tx = await contractWithSigner.participateInCast(
+            userAddress,
+            userFid,
+            castHashBytes32,
+            conversationId,
+            castData.text
+        );
         console.log('Transaction sent:', tx.hash);
         
         // Wait for transaction confirmation
@@ -637,9 +694,9 @@ export async function POST(request: NextRequest) {
                 console.log('Balance check result:', balanceCheck);
 
                 if (!balanceCheck.hasBalance) {
-                    console.log('User has insufficient balance in all wallets');
+                    console.log('User cannot participate - checking reasons');
                     
-                    // Create a message showing shortened wallet addresses with allowance info
+                    // Create a message based on the specific issue
                     const firstWallet = balanceCheck.allAddresses[0];
                     const walletCount = balanceCheck.allAddresses.length;
                     
@@ -649,10 +706,23 @@ export async function POST(request: NextRequest) {
                     };
                     
                     let insufficientBalanceResponse;
-                    if (walletCount === 1) {
+                    
+                    // Check if it's a conversation limit issue
+                    const hasReachedConversationLimit = balanceCheck.allAddresses.some(addr => 
+                        'remainingConversations' in addr && addr.remainingConversations === 0
+                    );
+                    
+                    if (hasReachedConversationLimit) {
+                        const firstWalletWithLimit = balanceCheck.allAddresses.find(addr => 
+                            'remainingConversations' in addr && addr.remainingConversations === 0
+                        );
+                        const conversationCount = firstWalletWithLimit && 'conversationCount' in firstWalletWithLimit ? firstWalletWithLimit.conversationCount : 0;
+                        insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you've reached your limit of 3 conversations this week! You currently have ${conversationCount}/3 conversations. Come back next week to start fresh conversations! 💫`;
+                    } else if (walletCount === 1) {
                         const shortAddress = shortenAddress(firstWallet.address);
                         if (firstWallet.hasParticipated) {
-                            insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you've already participated this week! You have ${firstWallet.balance} USDC in your contract balance. Come back next week for another chance! 💫`;
+                            const remainingConvs = 'remainingConversations' in firstWallet ? firstWallet.remainingConversations : 0;
+                            insufficientBalanceResponse = `Hey there! 😊 You have ${firstWallet.balance} USDC and ${remainingConvs} conversations remaining this week. Let's continue chatting! 💫`;
                         } else {
                             insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your contract balance to participate. You currently have ${firstWallet.balance} USDC. Please top up your contract balance on our website and try again! 💫`;
                         }
@@ -661,7 +731,7 @@ export async function POST(request: NextRequest) {
                         const hasParticipated = balanceCheck.allAddresses.some(addr => addr.hasParticipated);
                         
                         if (hasParticipated) {
-                            insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you've already participated this week! Please come back next week for another chance! 💫`;
+                            insufficientBalanceResponse = `Hey there! 😊 I see you've participated this week! Come back next week for another chance! 💫`;
                         } else {
                             // Show all wallet addresses in shortened format
                             const shortAddresses = balanceCheck.allAddresses.map(addr => 
@@ -690,7 +760,7 @@ export async function POST(request: NextRequest) {
                 }
 
                 // Record participation in smart contract using the best address
-                const participationResult = await recordParticipation(balanceCheck.bestAddress || userAddresses[0], castData.hash);
+                const participationResult = await recordParticipation(balanceCheck.bestAddress || userAddresses[0], castData);
                 console.log('Participation recording result:', participationResult);
             }
 

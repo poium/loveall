@@ -16,7 +16,7 @@ contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
     IERC20 public immutable usdcToken;
     
     // Constants
-    uint256 public castCost = 1e4; // 0.01 USDC (1 cent) (6 decimals) - adjustable by owner
+    uint256 public constant CAST_COST = 1e4; // 0.01 USDC (1 cent) (6 decimals)
     uint256 public constant WINNER_PERCENTAGE = 80; // 80% to winner
     uint256 public constant ROLLOVER_PERCENTAGE = 10; // 10% rollover
     uint256 public constant PROTOCOL_FEE_PERCENTAGE = 10; // 10% protocol fee
@@ -86,7 +86,6 @@ contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
     event PrizeDistributed(address indexed winner, uint256 prize, uint256 rollover, uint256 protocolFee);
     event PrizePoolContribution(address indexed contributor, uint256 amount);
     event CharacterSet(uint256 indexed week, string name, string task, uint8 traitCount);
-    event CastCostUpdated(uint256 oldCost, uint256 newCost);
     
     // Errors
     error InsufficientBalance();
@@ -189,7 +188,7 @@ contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
         whenNotPaused 
         onlyOwner 
     {
-        if (userBalances[user] < castCost) {
+        if (userBalances[user] < CAST_COST) {
             revert InsufficientBalance();
         }
         
@@ -222,9 +221,9 @@ contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
         conversationCastCount[currentWeek][conversationId] = currentCastCount + 1;
         
         // Deduct balance and add to prize pool
-        userBalances[user] -= castCost;
-        currentWeekPrizePool += castCost;
-        totalPrizePool += castCost;
+        userBalances[user] -= CAST_COST;
+        currentWeekPrizePool += CAST_COST;
+        totalPrizePool += CAST_COST;
         
         // Track participation
         CastParticipation memory participation = CastParticipation({
@@ -234,7 +233,7 @@ contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
             conversationId: conversationId,
             timestamp: block.timestamp,
             weekNumber: currentWeek,
-            usdcAmount: castCost,
+            usdcAmount: CAST_COST,
             aiScore: 0, // Initialize with 0, will be set by AI evaluation
             isEvaluated: false
         });
@@ -253,7 +252,7 @@ contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
         weeklyParticipants[currentWeek].push(user);
         }
         
-        emit CastParticipated(user, fid, castHash, conversationId, castCost, castContent);
+        emit CastParticipated(user, fid, castHash, conversationId, CAST_COST, castContent);
     }
     
 
@@ -568,7 +567,6 @@ contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
         uint256 rolloverAmount;
         uint256 totalContributions;
         uint256 totalProtocolFees;
-        uint256 castCost;
         uint256 currentWeek;
         uint256 weekStartTime;
         uint256 weekEndTime;
@@ -605,7 +603,6 @@ contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
             rolloverAmount: rolloverAmount,
             totalContributions: totalContributions,
             totalProtocolFees: totalProtocolFees,
-            castCost: castCost,
             currentWeek: currentWeek,
             weekStartTime: weekStartTime,
             weekEndTime: weekStartTime + WEEK_DURATION,
@@ -640,7 +637,7 @@ contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
         
         return UserData({
             balance: userBalances[user],
-            hasSufficientBalance: userBalances[user] >= castCost,
+            hasSufficientBalance: userBalances[user] >= CAST_COST,
             hasParticipatedThisWeek: weeklyParticipations[currentWeek][user].length > 0,
             participationsCount: weeklyParticipations[currentWeek][user].length,
             conversationCount: conversationCount,
@@ -678,7 +675,7 @@ contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
             
             usersData[i] = UserData({
                 balance: userBalances[user],
-                hasSufficientBalance: userBalances[user] >= castCost,
+                hasSufficientBalance: userBalances[user] >= CAST_COST,
                 hasParticipatedThisWeek: weeklyParticipations[currentWeek][user].length > 0,
                 participationsCount: weeklyParticipations[currentWeek][user].length,
                 conversationCount: conversationCount,
@@ -757,19 +754,6 @@ contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
     }
     
 
-    
-    /**
-     * @dev Set cast cost (only owner)
-     * @param newCastCost New cost for each cast in USDC (6 decimals)
-     */
-    function setCastCost(uint256 newCastCost) external onlyOwner {
-        if (newCastCost == 0) revert InvalidAmount();
-        
-        uint256 oldCastCost = castCost;
-        castCost = newCastCost;
-        
-        emit CastCostUpdated(oldCastCost, newCastCost);
-    }
     
     /**
      * @dev Emergency pause

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import AdminDashboard from './components/AdminDashboard';
 
 interface PrizePoolData {
   currentWeek: number;
@@ -841,7 +842,7 @@ export default function Home() {
                                  {participation.isEvaluated ? 'Evaluated' : 'Pending Evaluation'}
                                </div>
                                <a
-                                 href={`https://farcaster.xyz/v/${participation.castHash}`}
+                                 href={`https://farcaster.xyz/v/${participation.castHash.slice(0, 10)}`}
                                  target="_blank"
                                  rel="noopener noreferrer"
                                  className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded-lg transition-colors"
@@ -864,7 +865,7 @@ export default function Home() {
                                    {participation.castHash}
                                  </p>
                                  <a
-                                   href={`https://farcaster.xyz/v/${participation.castHash}`}
+                                   href={`https://farcaster.xyz/v/${participation.castHash.slice(0, 10)}`}
                                    target="_blank"
                                    rel="noopener noreferrer"
                                    className="text-indigo-400 hover:text-indigo-300 transition-colors"
@@ -985,6 +986,13 @@ export default function Home() {
           )}
           </div>
           
+        {/* Admin Dashboard - Only show for contract owner */}
+        {isConnected && address && (
+          <div className="mt-8">
+            <AdminDashboard />
+          </div>
+        )}
+
         {/* Connect Wallet Prompt - Only show when not connected */}
         {!isConnected && (
           /* Connect Wallet Prompt */
