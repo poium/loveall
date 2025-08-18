@@ -508,6 +508,24 @@ export default function Home() {
                 Loveall
               </h1>
             </div>
+            
+            {/* Navigation */}
+            <nav className="hidden md:flex items-center space-x-6">
+              <a 
+                href="/" 
+                className="text-gray-300 hover:text-white transition-colors duration-200 font-medium"
+              >
+                Dashboard
+              </a>
+              <a 
+                href="/chat" 
+                className="text-gray-300 hover:text-white transition-colors duration-200 font-medium flex items-center space-x-1"
+              >
+                <span>💬</span>
+                <span>Chat History</span>
+              </a>
+            </nav>
+            
             <ConnectButton />
           </div>
         </div>
