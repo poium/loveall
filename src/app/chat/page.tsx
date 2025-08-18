@@ -371,9 +371,11 @@ export default function ChatPage() {
                       <p className="text-sm mt-2">Cast content may not be accessible</p>
                     </div>
                   ) : (
-                    selectedConv.casts.map((cast, index) => {
-                      const participation = selectedConv.participations.find(p => p.castHash === cast.hash);
-                      const isBot = cast.author.username === 'loveall';
+                    selectedConv.casts
+                      .filter(cast => cast && !cast.error && cast.author) // Filter out failed/invalid casts
+                      .map((cast, index) => {
+                        const participation = selectedConv.participations.find(p => p.castHash === cast.hash);
+                        const isBot = cast.author?.username === 'loveall';
                       
                       return (
                         <div 

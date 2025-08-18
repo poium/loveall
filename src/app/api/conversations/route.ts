@@ -12,6 +12,21 @@ function createProvider() {
     return new ethers.JsonRpcProvider(RPC_ENDPOINT);
 }
 
+// Clean up cast hash - remove padding zeros that were added for bytes32
+function cleanCastHash(hash: string): string {
+    if (!hash || !hash.startsWith('0x')) return hash;
+    
+    // Remove trailing zeros that were added for bytes32 padding
+    const cleaned = hash.replace(/0+$/, '');
+    
+    // Ensure it's still a valid hex string length (should be around 40-42 chars for real hashes)
+    if (cleaned.length < 20) {
+        return hash; // Return original if cleaning made it too short
+    }
+    
+    return cleaned;
+}
+
 // Get conversations for a specific user
 export async function GET(request: NextRequest) {
     try {
@@ -38,7 +53,7 @@ export async function GET(request: NextRequest) {
             const formattedParticipations = participations.map((p: any) => ({
                 user: p.user,
                 fid: Number(p.fid),
-                castHash: p.castHash,
+                castHash: cleanCastHash(p.castHash),
                 conversationId: p.conversationId,
                 timestamp: Number(p.timestamp),
                 weekNumber: Number(p.weekNumber),
@@ -78,7 +93,7 @@ export async function GET(request: NextRequest) {
                 conversationMap.get(convId).push({
                     user: p.user,
                     fid: Number(p.fid),
-                    castHash: p.castHash,
+                    castHash: cleanCastHash(p.castHash),
                     conversationId: p.conversationId,
                     timestamp: Number(p.timestamp),
                     weekNumber: Number(p.weekNumber),
