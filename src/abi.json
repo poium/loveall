@@ -258,6 +258,67 @@
         "inputs": [
             {
                 "indexed": true,
+                "internalType": "address",
+                "name": "user",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "fid",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "bytes32",
+                "name": "userCastHash",
+                "type": "bytes32"
+            },
+            {
+                "indexed": false,
+                "internalType": "bytes32",
+                "name": "botCastHash",
+                "type": "bytes32"
+            },
+            {
+                "indexed": false,
+                "internalType": "bytes32",
+                "name": "conversationId",
+                "type": "bytes32"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "cost",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "string",
+                "name": "userCastContent",
+                "type": "string"
+            },
+            {
+                "indexed": false,
+                "internalType": "string",
+                "name": "botReplyContent",
+                "type": "string"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "timestamp",
+                "type": "uint256"
+            }
+        ],
+        "name": "CompleteConversationRecorded",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
                 "internalType": "uint256",
                 "name": "week",
                 "type": "uint256"
@@ -1243,6 +1304,49 @@
             }
         ],
         "name": "participateInCast",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "user",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "fid",
+                "type": "uint256"
+            },
+            {
+                "internalType": "bytes32",
+                "name": "userCastHash",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "bytes32",
+                "name": "botCastHash",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "bytes32",
+                "name": "conversationId",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "string",
+                "name": "userCastContent",
+                "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "botReplyContent",
+                "type": "string"
+            }
+        ],
+        "name": "recordCompleteConversation",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"

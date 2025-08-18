@@ -514,10 +514,15 @@ async function checkUserBalance(userAddresses: string[]): Promise<{
     }
 }
 
-// Record participation in the smart contract
-async function recordParticipation(userAddress: string, castData: any): Promise<{ success: boolean; error?: string; txHash?: string }> {
+// Record complete conversation (user cast + bot reply) in the smart contract  
+async function recordCompleteConversation(
+    userAddress: string, 
+    castData: any, 
+    botReply: string, 
+    replyResult: any
+): Promise<{ success: boolean; error?: string; txHash?: string }> {
     try {
-        console.log('Recording participation for user:', userAddress, 'cast:', castData.hash);
+        console.log('Recording complete conversation for user:', userAddress, 'user cast:', castData.hash);
         
         // Check if we have the bot's private key
         const botPrivateKey = process.env.PRIVATE_KEY;
@@ -574,31 +579,48 @@ async function recordParticipation(userAddress: string, castData: any): Promise<
             castHashBytes32 = castHashBytes32.substring(0, 66);
         }
         
-        console.log('Original hash:', castData.hash);
-        console.log('Formatted hash:', castHashBytes32);
-        console.log('Hash length:', castHashBytes32.length);
+        console.log('Original user hash:', castData.hash);
+        console.log('Formatted user hash:', castHashBytes32);
+        console.log('User hash length:', castHashBytes32.length);
         
-        const tx = await contractWithSigner.participateInCast(
+        // Format bot reply hash the same way
+        let botCastHashBytes32 = 'hash' in replyResult ? replyResult.hash : '0x0000000000000000000000000000000000000000000000000000000000000000';
+        if (!botCastHashBytes32.startsWith('0x')) {
+            botCastHashBytes32 = '0x' + botCastHashBytes32;
+        }
+        if (botCastHashBytes32.length < 66) {
+            botCastHashBytes32 = botCastHashBytes32.padEnd(66, '0');
+        } else if (botCastHashBytes32.length > 66) {
+            botCastHashBytes32 = botCastHashBytes32.substring(0, 66);
+        }
+        
+        console.log('Bot reply hash:', botCastHashBytes32);
+        console.log('User cast content:', castData.text);
+        console.log('Bot reply content:', botReply);
+        
+        const tx = await contractWithSigner.recordCompleteConversation(
             userAddress,
             userFid,
-            castHashBytes32,
+            castHashBytes32,        // User's cast hash
+            botCastHashBytes32,     // Bot's reply hash
             conversationId,
-            castData.text
+            castData.text,          // User's cast content
+            botReply                // Bot's reply content
         );
-        console.log('Transaction sent:', tx.hash);
+        console.log('Complete conversation transaction sent:', tx.hash);
         
         // Wait for transaction confirmation
         console.log('Waiting for transaction confirmation...');
         const receipt = await tx.wait();
         console.log('Transaction confirmed:', receipt.hash);
         
-        console.log('Participation recorded successfully');
+        console.log('Complete conversation recorded successfully on-chain');
         return { 
             success: true, 
             txHash: receipt.hash 
         };
     } catch (error) {
-        console.error('Error recording participation:', error);
+        console.error('Error recording complete conversation:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error'
@@ -761,10 +783,6 @@ export async function POST(request: NextRequest) {
                     }
                 }
 
-            // Record participation in smart contract using the best address
-            const participationResult = await recordParticipation(balanceCheck.bestAddress || userAddresses[0], castData);
-            console.log('Participation recording result:', participationResult);
-
             // Get thread context for better understanding
             const threadContext = await getThreadContext(castData);
             console.log('Thread context:', threadContext);
@@ -779,11 +797,11 @@ export async function POST(request: NextRequest) {
                 console.log('Reply to bot detected');
             }
 
-            // Get context-aware response from Grok AI
+            // Get context-aware response from Grok AI FIRST
             const response = await getGrokResponse(castData.text, threadContext, interactionType);
             console.log('Generated response:', response);
 
-            // Only post reply if Grok AI provided a response
+            // Only proceed if Grok AI provided a response
             if (!response) {
                 console.log('No response from Grok AI - bot will not reply');
                 return NextResponse.json({
@@ -798,26 +816,38 @@ export async function POST(request: NextRequest) {
                 });
             }
 
-            // Post reply to Farcaster
+            // Post reply to Farcaster SECOND
+            let replyResult;
             try {
-                const replyResult = await postReplyToFarcaster(castData.hash, response);
+                replyResult = await postReplyToFarcaster(castData.hash, response);
                 console.log('Reply posted successfully:', replyResult);
 
                 // Handle both test and real responses
                 const replyHash = 'hash' in replyResult ? replyResult.hash : 'unknown';
 
+                // Record complete conversation in smart contract THIRD (after AI + Farcaster success)
+                const conversationResult = await recordCompleteConversation(
+                    balanceCheck.bestAddress || userAddresses[0], 
+                    castData, 
+                    response, 
+                    replyResult
+                );
+                console.log('Complete conversation recording result:', conversationResult);
+
             return NextResponse.json({ 
                 status: 'processed', 
                 response,
                     interactionType,
-                    message: 'Interaction detected and reply posted to Farcaster',
+                    message: 'Interaction detected, reply posted to Farcaster, and conversation recorded on-chain',
                     timestamp: new Date().toISOString(),
                     castText: castData.text,
                     threadContext: threadContext.substring(0, 100) + '...',
                     replyPosted: true,
                     replyHash: replyHash,
                     userAddresses: userAddresses,
-                    balanceChecked: isDirectMention
+                    balanceChecked: isDirectMention,
+                    conversationRecorded: conversationResult.success,
+                    blockchainTxHash: conversationResult.txHash
                 });
             } catch (replyError: any) {
                 console.error('Failed to post reply:', replyError);

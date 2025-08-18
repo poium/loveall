@@ -105,7 +105,71 @@ export default function ChatPage() {
                   casts: castData.casts || []
                 };
               } else {
-                console.error('Failed to fetch cast content for conversation:', conv.conversationId);
+                console.warn('Farcaster API failed, trying blockchain events fallback for conversation:', conv.conversationId);
+                
+                // Fallback: Get cast content from blockchain events
+                try {
+                  const blockchainResponse = await fetch(`/api/blockchain-events?user=${address}`);
+                  if (blockchainResponse.ok) {
+                    const blockchainData = await blockchainResponse.json();
+                    
+                    // Find matching conversation
+                    const matchingConv = blockchainData.conversations?.find((c: any) => 
+                      c.conversationId === conv.conversationId
+                    );
+                    
+                    if (matchingConv) {
+                      // Convert blockchain events to cast format
+                      const blockchainCasts: any[] = [];
+                      
+                      matchingConv.participations.forEach((p: any) => {
+                        // Add user cast
+                        blockchainCasts.push({
+                          hash: p.castHash,
+                          text: p.castContent, // ✅ From blockchain!
+                          timestamp: p.timestampFormatted || new Date().toISOString(),
+                          author: {
+                            fid: p.fid,
+                            username: 'User',
+                            display_name: 'User',
+                            pfp_url: '/default-avatar.png'
+                          },
+                          source: 'blockchain',
+                          isBot: false
+                        });
+                        
+                        // Add bot reply if available (from complete conversations)
+                        if (p.botReply && p.type === 'complete') {
+                          blockchainCasts.push({
+                            hash: p.botCastHash,
+                            text: p.botReply, // ✅ Bot reply from blockchain!
+                            timestamp: p.timestampFormatted || new Date().toISOString(),
+                            author: {
+                              fid: 1159914, // Bot's FID
+                              username: 'loveall',
+                              display_name: 'LoveAll',
+                              pfp_url: 'https://images.pexels.com/photos/20025519/pexels-photo-20025519.jpeg'
+                            },
+                            source: 'blockchain',
+                            isBot: true
+                          });
+                        }
+                      });
+                      
+                      // Sort by timestamp for proper conversation flow
+                      blockchainCasts.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+                      
+                      return {
+                        ...conv,
+                        casts: blockchainCasts,
+                        source: 'blockchain_fallback'
+                      };
+                    }
+                  }
+                } catch (blockchainError) {
+                  console.error('Blockchain fallback also failed:', blockchainError);
+                }
+                
                 return {
                   ...conv,
                   casts: []
@@ -415,6 +479,9 @@ export default function ChatPage() {
                                     <span className="ml-1">• Score: {participation.aiScore}</span>
                                   )}
                                 </span>
+                              )}
+                              {cast.source === 'blockchain' && (
+                                <span className="ml-2 text-blue-600 font-medium">• 🔗 On-chain</span>
                               )}
                             </div>
                           </div>

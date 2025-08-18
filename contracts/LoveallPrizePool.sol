@@ -79,6 +79,7 @@ contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
     event BalanceToppedUp(address indexed user, uint256 amount);
     event BalanceWithdrawn(address indexed user, uint256 amount);
     event CastParticipated(address indexed user, uint256 fid, bytes32 castHash, bytes32 conversationId, uint256 cost, string castContent);
+    event CompleteConversationRecorded(address indexed user, uint256 fid, bytes32 userCastHash, bytes32 botCastHash, bytes32 conversationId, uint256 cost, string userCastContent, string botReplyContent, uint256 timestamp);
     event AIEvaluationCompleted(address indexed user, uint256 fid, bytes32 conversationId, uint256 aiScore);
     event TopScoresRecorded(uint256 totalEvaluated, uint256 topScoresCount);
     event WinnerSelected(address indexed winner, uint256 prize, uint256 week);
@@ -256,6 +257,105 @@ contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
         emit CastParticipated(user, fid, castHash, conversationId, castCost, castContent);
     }
     
+    /**
+     * @dev Record complete conversation: user cast + bot reply in one transaction
+     * @param user User address (original cast author)
+     * @param fid Farcaster ID
+     * @param userCastHash Hash of user's original cast
+     * @param botCastHash Hash of bot's reply cast
+     * @param conversationId Conversation/thread ID (derived from original cast)
+     * @param userCastContent User's original message content
+     * @param botReplyContent Bot's generated reply content
+     */
+    function recordCompleteConversation(
+        address user, 
+        uint256 fid, 
+        bytes32 userCastHash, 
+        bytes32 botCastHash, 
+        bytes32 conversationId, 
+        string calldata userCastContent, 
+        string calldata botReplyContent
+    ) 
+        external 
+        whenNotPaused 
+        onlyOwner 
+    {
+        if (userBalances[user] < castCost) {
+            revert InsufficientBalance();
+        }
+        
+        // Check conversation limit for user
+        uint256 currentConversationCount = userConversationCount[currentWeek][user];
+        bool isNewConversation = true;
+        
+        // Check if this is a new conversation for the user
+        CastParticipation[] memory existingParticipations = weeklyParticipations[currentWeek][user];
+        for (uint256 i = 0; i < existingParticipations.length; i++) {
+            if (existingParticipations[i].conversationId == conversationId) {
+                isNewConversation = false;
+                break;
+            }
+        }
+        
+        // If this is a new conversation, check the limit
+        if (isNewConversation) {
+            if (currentConversationCount >= MAX_CONVERSATIONS_PER_USER_PER_WEEK) {
+                revert MaxConversationsReached();
+            }
+            userConversationCount[currentWeek][user] = currentConversationCount + 1;
+        }
+        
+        // Check cast limit for conversation
+        uint256 currentCastCount = conversationCastCount[currentWeek][conversationId];
+        if (currentCastCount >= MAX_CASTS_PER_CONVERSATION) {
+            revert MaxCastsPerConversationReached();
+        }
+        conversationCastCount[currentWeek][conversationId] = currentCastCount + 1;
+        
+        // Deduct balance and add to prize pool
+        userBalances[user] -= castCost;
+        currentWeekPrizePool += castCost;
+        
+        // Create participation record (using user cast hash for compatibility)
+        CastParticipation memory participation = CastParticipation({
+            user: user,
+            fid: fid,
+            castHash: userCastHash,
+            conversationId: conversationId,
+            timestamp: block.timestamp,
+            weekNumber: currentWeek,
+            usdcAmount: castCost,
+            aiScore: 0, // Initialize with 0, will be set by AI evaluation
+            isEvaluated: false
+        });
+        
+        weeklyParticipations[currentWeek][user].push(participation);
+        
+        // Only add to participants list if this is their first participation this week
+        bool isFirstParticipation = true;
+        for (uint256 i = 0; i < weeklyParticipants[currentWeek].length; i++) {
+            if (weeklyParticipants[currentWeek][i] == user) {
+                isFirstParticipation = false;
+                break;
+            }
+        }
+        if (isFirstParticipation) {
+            weeklyParticipants[currentWeek].push(user);
+        }
+        
+        // Emit complete conversation event with both user and bot content
+        emit CompleteConversationRecorded(
+            user, 
+            fid, 
+            userCastHash, 
+            botCastHash, 
+            conversationId, 
+            castCost, 
+            userCastContent, 
+            botReplyContent, 
+            block.timestamp
+        );
+    }
 
     
     /**
