@@ -51,6 +51,12 @@ export default function ChatPage() {
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Fix hydration mismatch by only rendering address-dependent content after mount
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Fetch conversations for connected user
   useEffect(() => {
@@ -133,6 +139,51 @@ export default function ChatPage() {
   const truncateConversationId = (id: string) => {
     return `${id.slice(0, 8)}...${id.slice(-8)}`;
   };
+
+  // Show loading state during hydration to prevent mismatch
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50">
+        <header className="bg-white/80 backdrop-blur-sm border-b border-purple-200">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center py-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">❤️</span>
+                </div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+                  Loveall
+                </h1>
+              </div>
+              
+              <nav className="hidden md:flex items-center space-x-6">
+                <a 
+                  href="/" 
+                  className="text-gray-600 hover:text-gray-800 transition-colors duration-200 font-medium"
+                >
+                  Dashboard
+                </a>
+                <a 
+                  href="/chat" 
+                  className="text-purple-600 hover:text-purple-800 transition-colors duration-200 font-medium flex items-center space-x-1"
+                >
+                  <span>💬</span>
+                  <span>Chat History</span>
+                </a>
+              </nav>
+            </div>
+          </div>
+        </header>
+
+        <div className="max-w-6xl mx-auto p-4">
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+            <p className="mt-2 text-gray-600">Loading...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!address) {
     return (
@@ -224,7 +275,9 @@ export default function ChatPage() {
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-4">💬 Chat History</h1>
           <p className="text-gray-600">Your conversation history with the Loveall bot</p>
-          <p className="text-sm text-gray-500 mt-2">Connected: {truncateAddress(address)}</p>
+          {isMounted && address && (
+            <p className="text-sm text-gray-500 mt-2">Connected: {truncateAddress(address)}</p>
+          )}
         </div>
 
         {loading && (
