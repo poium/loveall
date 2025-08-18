@@ -559,8 +559,24 @@ async function recordParticipation(userAddress: string, castData: any): Promise<
         console.log('- Conversation ID:', conversationId);
         console.log('- Cast Content:', castData.text);
         
-        // Convert cast hash to bytes32 if needed
-        const castHashBytes32 = castData.hash.startsWith('0x') ? castData.hash : ethers.keccak256(ethers.toUtf8Bytes(castData.hash));
+        // Convert cast hash to proper bytes32 format
+        let castHashBytes32 = castData.hash;
+        if (!castHashBytes32.startsWith('0x')) {
+            castHashBytes32 = '0x' + castHashBytes32;
+        }
+        
+        // Ensure it's exactly 32 bytes (64 hex chars + 0x = 66 total)
+        if (castHashBytes32.length < 66) {
+            // Pad with zeros on the right to make it 32 bytes
+            castHashBytes32 = castHashBytes32.padEnd(66, '0');
+        } else if (castHashBytes32.length > 66) {
+            // Take first 32 bytes if too long
+            castHashBytes32 = castHashBytes32.substring(0, 66);
+        }
+        
+        console.log('Original hash:', castData.hash);
+        console.log('Formatted hash:', castHashBytes32);
+        console.log('Hash length:', castHashBytes32.length);
         
         const tx = await contractWithSigner.participateInCast(
             userAddress,
