@@ -92,7 +92,10 @@ export default function ChatPage() {
               const castResponse = await fetch('/api/cast-content', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ hashes: castHashes })
+                body: JSON.stringify({ 
+                  hashes: castHashes,
+                  includeReplies: true  // Request bot replies too
+                })
               });
               
               if (castResponse.ok) {
@@ -375,17 +378,17 @@ export default function ChatPage() {
                       .filter(cast => cast && !cast.error && cast.author) // Filter out failed/invalid casts
                       .map((cast, index) => {
                         const participation = selectedConv.participations.find(p => p.castHash === cast.hash);
-                        const isBot = cast.author?.username === 'loveall';
+                        const isBot = cast.isBot || cast.author?.username === 'loveall';
                       
                       return (
                         <div 
                           key={cast.hash}
                           className={`flex ${isBot ? 'justify-start' : 'justify-end'}`}
                         >
-                          <div 
+                                                      <div 
                             className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
                               isBot 
-                                ? 'bg-gray-100 text-gray-800' 
+                                ? 'bg-pink-100 text-gray-800 border-l-4 border-pink-400' 
                                 : 'bg-purple-600 text-white'
                             }`}
                           >
@@ -397,6 +400,7 @@ export default function ChatPage() {
                               />
                               <span className="text-sm font-medium">
                                 {cast.author.display_name}
+                                {isBot && <span className="ml-1 text-pink-600">🤖</span>}
                               </span>
                             </div>
                             

@@ -73,10 +73,10 @@ export async function GET(request: NextRequest) {
     }
 }
 
-// Batch fetch multiple casts
+// Batch fetch multiple casts and their replies
 export async function POST(request: NextRequest) {
     try {
-        const { hashes } = await request.json();
+        const { hashes, includeReplies = false } = await request.json();
 
         if (!hashes || !Array.isArray(hashes)) {
             return NextResponse.json({
@@ -91,7 +91,72 @@ export async function POST(request: NextRequest) {
             }, { status: 500 });
         }
 
-        console.log('Fetching batch cast content for', hashes.length, 'hashes');
+        console.log('Fetching batch cast content for', hashes.length, 'hashes', includeReplies ? 'with replies' : 'without replies');
+
+        // Fetch bot replies for a given cast
+        const fetchBotReplies = async (castHash: string) => {
+            try {
+                // Get replies to the cast
+                const repliesResponse = await fetch(`https://api.neynar.com/v2/farcaster/cast?identifier=${castHash}&type=hash`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'api_key': neynarApiKey
+                    }
+                });
+
+                if (!repliesResponse.ok) return [];
+
+                const repliesData = await repliesResponse.json();
+                const cast = repliesData.cast;
+
+                // If this cast has replies, fetch them
+                if (cast.replies && cast.replies.count > 0) {
+                    // Get conversation/thread to find bot replies
+                    const conversationResponse = await fetch(`https://api.neynar.com/v2/farcaster/cast/conversation?identifier=${castHash}&type=hash&reply_depth=2&include_chronological_parent_casts=false`, {
+                        headers: {
+                            'Accept': 'application/json',
+                            'api_key': neynarApiKey
+                        }
+                    });
+
+                    if (conversationResponse.ok) {
+                        const conversationData = await conversationResponse.json();
+                        const conversation = conversationData.conversation;
+                        
+                        // Find direct replies from the loveall bot
+                        const botReplies = conversation.cast.direct_replies?.filter((reply: any) => 
+                            reply.author.username === 'loveall'
+                        ) || [];
+
+                        return botReplies.map((reply: any) => ({
+                            hash: reply.hash,
+                            text: reply.text,
+                            timestamp: reply.timestamp,
+                            author: {
+                                fid: reply.author.fid,
+                                username: reply.author.username,
+                                display_name: reply.author.display_name,
+                                pfp_url: reply.author.pfp_url
+                            },
+                            parent_hash: reply.parent_hash,
+                            thread_hash: reply.thread_hash,
+                            replies: {
+                                count: reply.replies?.count || 0
+                            },
+                            reactions: {
+                                likes_count: reply.reactions?.likes_count || 0,
+                                recasts_count: reply.reactions?.recasts_count || 0
+                            },
+                            isBot: true
+                        }));
+                    }
+                }
+                return [];
+            } catch (error) {
+                console.error(`Error fetching bot replies for ${castHash}:`, error);
+                return [];
+            }
+        };
 
         // Fetch all casts in parallel
         const castPromises = hashes.map(async (hash) => {
@@ -111,7 +176,7 @@ export async function POST(request: NextRequest) {
                 const castData = await response.json();
                 const cast = castData.cast;
                 
-                return {
+                const userCast = {
                     hash: cast.hash,
                     text: cast.text,
                     timestamp: cast.timestamp,
@@ -129,8 +194,23 @@ export async function POST(request: NextRequest) {
                     reactions: {
                         likes_count: cast.reactions?.likes_count || 0,
                         recasts_count: cast.reactions?.recasts_count || 0
-                    }
+                    },
+                    isBot: false
                 };
+
+                // If includeReplies is true, fetch bot replies too
+                if (includeReplies) {
+                    const botReplies = await fetchBotReplies(hash);
+                    return {
+                        userCast,
+                        botReplies,
+                        allCasts: [userCast, ...botReplies].sort((a, b) => 
+                            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+                        )
+                    };
+                }
+
+                return userCast;
             } catch (error) {
                 console.error(`Error fetching cast ${hash}:`, error);
                 return { hash, error: error instanceof Error ? error.message : 'Unknown error' };
@@ -138,6 +218,33 @@ export async function POST(request: NextRequest) {
         });
 
         const results = await Promise.all(castPromises);
+        
+        if (includeReplies) {
+            // Flatten all casts (user + bot replies) into a single chronological list
+            const allCasts: any[] = [];
+            results.forEach((result: any) => {
+                if (result && !result.error) {
+                    if (result.allCasts) {
+                        allCasts.push(...result.allCasts);
+                    } else {
+                        allCasts.push(result);
+                    }
+                }
+            });
+
+            // Sort by timestamp for proper conversation flow
+            allCasts.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+            return NextResponse.json({
+                casts: allCasts,
+                conversations: results.filter(r => !r.error),
+                total: allCasts.length,
+                userCasts: results.filter(r => !r.error && r.userCast).length,
+                botReplies: allCasts.filter(c => c.isBot).length,
+                successful: results.filter(r => !r.error).length,
+                failed: results.filter(r => r.error).length
+            });
+        }
         
         return NextResponse.json({
             casts: results,
