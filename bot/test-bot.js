@@ -19,7 +19,7 @@ class BotTester {
         this.neynar = new NeynarAPIClient(config);
         
         // Initialize contract
-        this.contractAddress = '0x79C495b3F99EeC74ef06C79677Aee352F40F1De5';
+        this.contractAddress = '0x713DFCCE37f184a2aB3264D6DA5094Eae5F33dFa';
         this.provider = new ethers.JsonRpcProvider(process.env.BASE_RPC_URL);
         this.wallet = new ethers.Wallet(process.env.PRIVATE_KEY, this.provider);
         this.contract = new ethers.Contract(this.contractAddress, contractABI, this.wallet);

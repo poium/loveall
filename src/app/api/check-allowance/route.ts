@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
 import { getBotUserData } from '@/lib/bot-data';
 
-const CONTRACT_ADDRESS = '0x79C495b3F99EeC74ef06C79677Aee352F40F1De5';
+const CONTRACT_ADDRESS = '0x713DFCCE37f184a2aB3264D6DA5094Eae5F33dFa';
 const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
 // USDC ABI for allowance check

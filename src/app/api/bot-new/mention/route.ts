@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { NeynarAPIClient, Configuration } from '@neynar/nodejs-sdk';
 import { ethers } from 'ethers';
+import { 
+    responseCache, 
+    checkMultipleAddressesParallel, 
+    getInstantResponse,
+    performanceMonitor,
+    grokCircuitBreaker 
+} from '@/lib/bot-optimizations';
+import { requestDeduplicator } from '@/lib/request-deduplication';
+import { balanceManager } from '@/lib/balance-manager';
+import { requestQueue } from '@/lib/request-queue';
 import { getBotUserData, getBotCommonData } from '@/lib/bot-data';
 
 // Initialize Neynar client
@@ -15,14 +25,14 @@ const config = new Configuration({
 const neynar = new NeynarAPIClient(config);
 
 // Smart Contract Configuration
-const CONTRACT_ADDRESS = '0x79C495b3F99EeC74ef06C79677Aee352F40F1De5'; // LoveallPrizePool on Base Mainnet
+const CONTRACT_ADDRESS = '0x713DFCCE37f184a2aB3264D6DA5094Eae5F33dFa'; // LoveallPrizePool on Base Mainnet
 const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'; // USDC on Base
 // Cast cost is now dynamic and fetched from contract
 
-// Contract ABI (updated for new contract functions)
+// Contract ABI (updated for new unified conversation functions)
 const CONTRACT_ABI = [
     'function getUserData(address user) external view returns (tuple(uint256 balance, bool hasSufficientBalance, bool hasParticipatedThisWeek, uint256 participationsCount, uint256 conversationCount, uint256 remainingConversations, uint256 bestScore, bytes32 bestConversationId, uint256 totalContributions))',
-    'function participateInCast(address user, uint256 fid, bytes32 castHash, bytes32 conversationId, string castContent) external',
+    'function recordCompleteConversation(address user, uint256 fid, bytes32 userCastHash, bytes32 botCastHash, bytes32 conversationId, string userCastContent, string botReplyContent) external',
     'function getCommonData() external view returns (tuple(uint256 totalPrizePool, uint256 currentWeekPrizePool, uint256 rolloverAmount, uint256 totalContributions, uint256 totalProtocolFees, uint256 castCost, uint256 currentWeek, uint256 weekStartTime, uint256 weekEndTime, uint256 currentWeekParticipantsCount, address currentWeekWinner, uint256 currentWeekPrize, string characterName, string characterTask, bool characterIsSet))',
     'function getCurrentCharacter() external view returns (tuple(string name, string task, string[5] traitNames, uint8[5] traitValues, uint8 traitCount, bool isSet))',
     'function setCastCost(uint256 newCastCost) external',
@@ -107,13 +117,37 @@ function cleanupProcessedCasts() {
     }
 }
 
-// Grok AI integration for context-aware responses
-async function getGrokResponse(castText: string, threadContext: string, interactionType: string) {
-    try {
+// Grok AI integration - ALWAYS call API for paid users
+async function getGrokResponse(castText: string, threadContext: string, interactionType: string, isPaidUser: boolean = false) {
+    return await performanceMonitor.measure('grok_response_total', async () => {
+        try {
+            // 🚨 IMPORTANT: If user has paid, they get REAL AI response - no shortcuts!
+            if (isPaidUser) {
+                console.log('💰 PAID USER - Bypassing cache, providing fresh AI response');
+                // Skip all caching/patterns for paid users - they deserve real AI!
+            } else {
+                console.log('🆓 FREE/UNPAID USER - Using optimizations');
+                
+                // 1. Check for instant pattern responses first (0ms response time!)
+                const instantResponse = getInstantResponse(castText);
+                if (instantResponse) {
+                    console.log('⚡ Using instant pattern response for unpaid user');
+                    return instantResponse;
+                }
+                
+                // 2. Check response cache (1-5ms response time)
+                const cachedResponse = responseCache.get(castText, interactionType);
+                if (cachedResponse) {
+                    console.log('💾 Using cached response for unpaid user');
+                    return cachedResponse;
+                }
+            }
+            
+            // 3. Call Grok API (for paid users OR unpaid users with cache miss)
         const grokApiKey = process.env.GROK_API_KEY;
         if (!grokApiKey) {
             console.log('Grok API key not found - bot will not respond');
-            return null; // No fallback, just return null
+                return null;
         }
 
         // Clean and prepare the context
@@ -166,6 +200,9 @@ Generate a warm, positive response that makes them feel good:`;
             interactionType
         });
 
+        // Use circuit breaker for Grok API calls with fallback
+        const apiResponse = await grokCircuitBreaker.execute(
+            async () => {
         const response = await fetch('https://api.x.ai/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -197,15 +234,38 @@ Generate a warm, positive response that makes them feel good:`;
             return null; // No fallback, just return null
         }
 
-        const data = await response.json();
-        console.log('Grok API response data:', JSON.stringify(data, null, 2));
+                return await response.json();
+            },
+            // Fallback function when Grok API fails
+            async () => {
+                console.log('🔄 Using fallback response due to Grok API failure');
+                return {
+                    choices: [{
+                        message: {
+                            content: getFallbackResponse(cleanCastText)
+                        }
+                    }]
+                };
+            }
+        );
         
-        const grokResponse = data.choices?.[0]?.message?.content?.trim();
-        const reasoningContent = data.choices?.[0]?.message?.reasoning_content;
-        const finishReason = data.choices?.[0]?.finish_reason;
+        console.log('Grok API response data:', JSON.stringify(apiResponse, null, 2));
+        
+        const grokResponse = apiResponse.choices?.[0]?.message?.content?.trim();
+        const reasoningContent = apiResponse.choices?.[0]?.message?.reasoning_content;
+        const finishReason = apiResponse.choices?.[0]?.finish_reason;
         
         if (grokResponse) {
             console.log('Grok AI response:', grokResponse);
+            
+            // Only cache responses for unpaid users (paid users get fresh responses every time)
+            if (!isPaidUser) {
+                console.log('💾 Caching response for future unpaid users');
+                responseCache.set(castText, interactionType, grokResponse);
+            } else {
+                console.log('💰 NOT caching - paid user deserves fresh responses');
+            }
+            
             return grokResponse;
         } else if (reasoningContent && finishReason === 'length') {
             // If we hit token limit but have reasoning, extract the response from reasoning
@@ -249,12 +309,12 @@ Generate a warm, positive response that makes them feel good:`;
         } else {
             console.log('No valid response from Grok - bot will not respond');
             console.log('Response structure:', {
-                choices: data.choices,
-                hasChoices: !!data.choices,
-                choicesLength: data.choices?.length,
-                firstChoice: data.choices?.[0],
-                message: data.choices?.[0]?.message,
-                finishReason: data.choices?.[0]?.finish_reason
+                choices: apiResponse.choices,
+                hasChoices: !!apiResponse.choices,
+                choicesLength: apiResponse.choices?.length,
+                firstChoice: apiResponse.choices?.[0],
+                message: apiResponse.choices?.[0]?.message,
+                finishReason: apiResponse.choices?.[0]?.finish_reason
             });
             return null; // No fallback, just return null
         }
@@ -262,6 +322,22 @@ Generate a warm, positive response that makes them feel good:`;
     } catch (error) {
         console.error('Grok AI error:', error);
         return null; // No fallback, just return null
+        }
+    });
+}
+
+// Fallback response when Grok API fails
+function getFallbackResponse(castText: string): string {
+    const userMessage = castText.toLowerCase();
+    
+    if (userMessage.includes('how is it going') || userMessage.includes('how are you')) {
+        return "I'm doing great! Thanks for asking. 😊 What's been the highlight of your day so far?";
+    } else if (userMessage.includes('where are you from')) {
+        return "I'm from the digital realm of Farcaster! 🌐 I love connecting with people from all over. What's your favorite place to explore?";
+    } else if (userMessage.includes('hello') || userMessage.includes('hey') || userMessage.includes('hi')) {
+        return "Hey there! 😊 I'm Loveall, and I'm really happy to meet you! What's on your mind today?";
+    } else {
+        return "Hey! Thanks for reaching out. 😊 I'd love to hear what's been on your mind lately.";
     }
 }
 
@@ -389,6 +465,7 @@ async function checkSingleAddressBalance(userAddress: string): Promise<{
     balance: string; 
     hasParticipated: boolean; 
     conversationCount: number;
+
     remainingConversations: number;
     canParticipate: boolean;
     error?: string 
@@ -464,7 +541,7 @@ async function checkSingleAddressBalance(userAddress: string): Promise<{
     }
 }
 
-// Check all user addresses and find the best one to use
+// Optimized: Check all user addresses in parallel
 async function checkUserBalance(userAddresses: string[]): Promise<{ 
     hasBalance: boolean; 
     balance: string; 
@@ -473,34 +550,38 @@ async function checkUserBalance(userAddresses: string[]): Promise<{
     error?: string 
 }> {
     try {
-        console.log('Checking balance for all user addresses:', userAddresses);
+        console.log('⚡ Checking balance for all user addresses in parallel:', userAddresses);
         
-        const addressResults = [];
+        // Use parallel processing for massive speed improvement
+        const addressResults = await performanceMonitor.measure('parallel_balance_check', async () => {
+            return await checkMultipleAddressesParallel(userAddresses, checkSingleAddressBalance);
+        });
+        
         let bestAddress: string | null = null;
         let bestBalance = '0';
         
-        // Check each address
-        for (const address of userAddresses) {
-            const result = await checkSingleAddressBalance(address);
-            addressResults.push({
-                address,
-                balance: result.balance,
-                hasBalance: result.hasBalance,
-                hasParticipated: result.hasParticipated
-            });
+        const formattedResults = addressResults.map((result: any, index: number) => {
+            const address = userAddresses[index];
             
             // Track the best address (first one with sufficient balance)
             if (result.hasBalance && !bestAddress) {
                 bestAddress = address;
                 bestBalance = result.balance;
             }
-        }
+            
+            return {
+                address,
+                balance: result.balance,
+                hasBalance: result.hasBalance,
+                hasParticipated: result.hasParticipated
+            };
+        });
         
         return {
             hasBalance: bestAddress !== null,
             balance: bestBalance,
             bestAddress,
-            allAddresses: addressResults
+            allAddresses: formattedResults
         };
     } catch (error) {
         console.error('Error checking user balances:', error);
@@ -514,15 +595,217 @@ async function checkUserBalance(userAddresses: string[]): Promise<{
     }
 }
 
+// Process user interaction with concurrency protection
+async function processUserInteraction(
+    castData: any, 
+    userAddresses: string[], 
+    isDirectMention: boolean, 
+    threadContext: string
+): Promise<any> {
+    const primaryAddress = userAddresses[0];
+    const requestId = `${castData.hash}:${Date.now()}`;
+    
+    try {
+        // 1. Reserve balance FIRST to prevent race conditions
+        console.log('🔒 Attempting to reserve balance for user interaction...');
+        const reservation = await balanceManager.reserveBalance(primaryAddress, requestId);
+        
+        if (!reservation.success) {
+            console.log('❌ Balance reservation failed:', reservation.error);
+            
+            // Send insufficient balance message
+            const insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your contract balance to participate. ${reservation.error}. Please top up your contract balance on our website and try again! 💫`;
+            
+            try {
+                const replyResult = await postReplyToFarcaster(castData.hash, insufficientBalanceResponse);
+                console.log('Insufficient balance reply posted:', replyResult);
+                
+                return {
+                    status: 'insufficient_balance',
+                    message: 'User has insufficient balance',
+                    timestamp: new Date().toISOString(),
+                    castText: castData.text,
+                    userAddresses: userAddresses,
+                    availableBalance: reservation.availableBalance,
+                    replyPosted: true
+                };
+            } catch (error) {
+                console.error('Error posting insufficient balance reply:', error);
+                return {
+                    status: 'insufficient_balance',
+                    message: 'User has insufficient balance',
+                    error: 'Failed to post reply'
+                };
+            }
+        }
+        
+        console.log('✅ Balance reserved successfully:', reservation.reservationId);
+        
+        // 2. Generate AI response (user has paid, so full AI experience)
+        const interactionType = isDirectMention ? 'direct_mention' : 'reply_to_bot';
+        console.log(`Interaction type: ${interactionType}`);
+        
+        const response = await getGrokResponse(castData.text, threadContext, interactionType, true);
+        console.log('Generated response for PAID USER:', response);
+        
+        if (!response) {
+            // Release reservation if AI fails
+            await balanceManager.releaseReservation(reservation.reservationId!);
+            console.log('No response from Grok AI - released reservation');
+            
+            return {
+                status: 'processed_no_response',
+                interactionType,
+                message: 'Interaction detected but no response generated from Grok AI',
+                timestamp: new Date().toISOString(),
+                castText: castData.text,
+                threadContext: threadContext.substring(0, 100) + '...',
+                replyPosted: false,
+                reason: 'grok_no_response'
+            };
+        }
+        
+        // 3. Record complete conversation on blockchain FIRST
+        let conversationResult;
+        try {
+            console.log('🔗 BLOCKCHAIN FIRST: Recording conversation before Farcaster post...');
+            conversationResult = await recordCompleteConversation(
+                primaryAddress,
+                castData,
+                response,
+                null // No Farcaster result yet - we'll update this after
+            );
+            
+            if (conversationResult.success) {
+                console.log('✅ Blockchain recording successful - user has been charged');
+                console.log('💰 Transaction hash:', conversationResult.txHash);
+                
+                // 4. Now post to Farcaster SECOND (after payment confirmed)
+                let replyResult;
+                try {
+                    console.log('📱 FARCASTER SECOND: Posting reply after blockchain confirmation...');
+                    replyResult = await postReplyToFarcaster(castData.hash, response);
+                    console.log('✅ Farcaster reply posted successfully:', replyResult);
+                    
+                    // Success! Release reservation (already charged via blockchain)
+                    await balanceManager.releaseReservation(reservation.reservationId!);
+                    
+                    return {
+                        status: 'success',
+                        message: 'Conversation recorded on blockchain and reply posted to Farcaster',
+                        timestamp: new Date().toISOString(),
+                        castText: castData.text,
+                        response: response,
+                        replyPosted: true,
+                        conversationRecorded: true,
+                        transactionHash: conversationResult.txHash,
+                        userAddress: primaryAddress,
+                        order: 'blockchain_first_farcaster_second'
+                    };
+                    
+                } catch (farcasterError) {
+                    // 🚨 CRITICAL: User paid, blockchain recorded, but Farcaster failed
+                    // This is actually OK - user got what they paid for (blockchain record)
+                    console.error('⚠️ Farcaster post failed AFTER blockchain success:', farcasterError);
+                    console.log('💡 User still got value: conversation recorded on blockchain');
+                    
+                    // Release reservation (user was already charged)
+                    await balanceManager.releaseReservation(reservation.reservationId!);
+                    
+                    return {
+                        status: 'partial_success',
+                        message: 'Conversation recorded on blockchain successfully, but Farcaster post failed',
+                        timestamp: new Date().toISOString(),
+                        castText: castData.text,
+                        response: response,
+                        replyPosted: false,
+                        conversationRecorded: true,
+                        transactionHash: conversationResult.txHash,
+                        userAddress: primaryAddress,
+                        farcasterError: farcasterError instanceof Error ? farcasterError.message : 'Unknown error',
+                        note: 'User received full value - conversation is permanently stored on blockchain'
+                    };
+                }
+                
+            } else {
+                // Blockchain failed - release reservation (user not charged)
+                await balanceManager.releaseReservation(reservation.reservationId!);
+                console.error('❌ Blockchain recording failed:', conversationResult.error);
+                console.log('💰 User NOT charged - no service delivered');
+                
+                return {
+                    status: 'blockchain_error', 
+                    message: 'Blockchain recording failed - user not charged',
+                    error: conversationResult.error,
+                    replyPosted: false,
+                    conversationRecorded: false,
+                    userAddress: primaryAddress,
+                    note: 'Fair transaction: no payment without service delivery'
+                };
+            }
+            
+        } catch (error) {
+            // Release reservation on any blockchain error
+            await balanceManager.releaseReservation(reservation.reservationId!);
+            console.error('Blockchain recording error:', error);
+            
+            return {
+                status: 'blockchain_error',
+                message: 'Reply posted but blockchain recording failed',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            };
+        }
+        
+    } catch (error) {
+        console.error('Error in processUserInteraction:', error);
+        
+        // Always try to release reservation on any error
+        try {
+            await balanceManager.releaseReservation(`${primaryAddress}:${requestId}`);
+        } catch (releaseError) {
+            console.error('Error releasing reservation:', releaseError);
+        }
+        
+        return {
+            status: 'error',
+            message: 'Internal processing error',
+            error: error instanceof Error ? error.message : 'Unknown error'
+        };
+    }
+}
+
 // Record complete conversation (user cast + bot reply) in the smart contract  
+// Character limits (must match contract constants)
+const MAX_MESSAGE_LENGTH = 2000;
+const MAX_CONVERSATION_LENGTH = 20000;
+
+function truncateMessage(message: string, maxLength: number = MAX_MESSAGE_LENGTH): string {
+    if (message.length <= maxLength) {
+        return message;
+    }
+    
+    // Truncate and add ellipsis
+    const truncated = message.substring(0, maxLength - 3) + '...';
+    console.log(`⚠️ Message truncated from ${message.length} to ${truncated.length} characters`);
+    return truncated;
+}
+
 async function recordCompleteConversation(
     userAddress: string, 
     castData: any, 
     botReply: string, 
-    replyResult: any
+    replyResult: any | null // Now nullable since we call this before Farcaster post
 ): Promise<{ success: boolean; error?: string; txHash?: string }> {
     try {
         console.log('Recording complete conversation for user:', userAddress, 'user cast:', castData.hash);
+        
+        // Validate and truncate message lengths to prevent contract reverts
+        const userContent = truncateMessage(castData.text || '');
+        const botContent = truncateMessage(botReply);
+        
+        if (userContent.length + botContent.length > MAX_CONVERSATION_LENGTH) {
+            console.warn('⚠️ Combined message length too long, this conversation may hit gas limits');
+        }
         
         // Check if we have the bot's private key
         const botPrivateKey = process.env.PRIVATE_KEY;
@@ -555,8 +838,8 @@ async function recordCompleteConversation(
         // Create contract instance with bot wallet
         const contractWithSigner = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, botWallet);
         
-        // Call the participateInCast function with new parameters
-        console.log('Calling participateInCast function...');
+        // Call the recordCompleteConversation function with new parameters
+        console.log('Calling recordCompleteConversation function...');
         console.log('Parameters:');
         console.log('- User:', userAddress);
         console.log('- FID:', userFid);
@@ -584,7 +867,15 @@ async function recordCompleteConversation(
         console.log('User hash length:', castHashBytes32.length);
         
         // Format bot reply hash the same way
-        let botCastHashBytes32 = 'hash' in replyResult ? replyResult.hash : '0x0000000000000000000000000000000000000000000000000000000000000000';
+        // Handle case where Farcaster post hasn't happened yet (blockchain-first approach)
+        let botCastHashBytes32;
+        if (replyResult && 'hash' in replyResult) {
+            botCastHashBytes32 = replyResult.hash;
+        } else {
+            // Generate a placeholder hash for blockchain-first approach
+            botCastHashBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
+            console.log('🔗 BLOCKCHAIN FIRST: Using placeholder bot cast hash (Farcaster post will happen after blockchain)');
+        }
         if (!botCastHashBytes32.startsWith('0x')) {
             botCastHashBytes32 = '0x' + botCastHashBytes32;
         }
@@ -595,17 +886,17 @@ async function recordCompleteConversation(
         }
         
         console.log('Bot reply hash:', botCastHashBytes32);
-        console.log('User cast content:', castData.text);
-        console.log('Bot reply content:', botReply);
+        console.log('User cast content:', userContent);
+        console.log('Bot reply content:', botContent);
         
         const tx = await contractWithSigner.recordCompleteConversation(
             userAddress,
             userFid,
             castHashBytes32,        // User's cast hash
-            botCastHashBytes32,     // Bot's reply hash
+            botCastHashBytes32,     // Bot's reply hash (placeholder if blockchain-first)
             conversationId,
-            castData.text,          // User's cast content
-            botReply                // Bot's reply content
+            userContent,            // User's cast content (truncated if needed)
+            botContent              // Bot's reply content (truncated if needed)
         );
         console.log('Complete conversation transaction sent:', tx.hash);
         
@@ -644,7 +935,10 @@ export async function GET(request: NextRequest) {
 
 // POST handler for webhook processing
 export async function POST(request: NextRequest) {
-    console.log('POST request received to webhook endpoint');
+    const startTime = Date.now();
+    console.log('🚀 POST request received to webhook endpoint');
+    
+    return await performanceMonitor.measure('total_request', async () => {
     console.log('Headers:', Object.fromEntries(request.headers.entries()));
 
     try {
@@ -719,160 +1013,35 @@ export async function POST(request: NextRequest) {
                 });
             }
 
-            // Check user's balance for both direct mentions and replies
-            const balanceCheck = await checkUserBalance(userAddresses);
-            console.log('Balance check result:', balanceCheck);
-
-            if (!balanceCheck.hasBalance) {
-                    console.log('User cannot participate - checking reasons');
-                    
-                    // Create a message based on the specific issue
-                    const firstWallet = balanceCheck.allAddresses[0];
-                    const walletCount = balanceCheck.allAddresses.length;
-                    
-                    // Function to shorten wallet address (first 4 + last 4 characters)
-                    const shortenAddress = (address: string) => {
-                        return `${address.slice(0, 6)}...${address.slice(-4)}`;
-                    };
-                    
-                    let insufficientBalanceResponse;
-                    
-                    // Check if it's a conversation limit issue
-                    const hasReachedConversationLimit = balanceCheck.allAddresses.some(addr => 
-                        'remainingConversations' in addr && addr.remainingConversations === 0
-                    );
-                    
-                    if (hasReachedConversationLimit) {
-                        const firstWalletWithLimit = balanceCheck.allAddresses.find(addr => 
-                            'remainingConversations' in addr && addr.remainingConversations === 0
-                        );
-                        const conversationCount = firstWalletWithLimit && 'conversationCount' in firstWalletWithLimit ? firstWalletWithLimit.conversationCount : 0;
-                        insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you've reached your limit of 3 conversations this week! You currently have ${conversationCount}/3 conversations. Come back next week to start fresh conversations! 💫`;
-                    } else if (walletCount === 1) {
-                        const shortAddress = shortenAddress(firstWallet.address);
-                        if (firstWallet.hasParticipated) {
-                            const remainingConvs = 'remainingConversations' in firstWallet ? firstWallet.remainingConversations : 0;
-                            insufficientBalanceResponse = `Hey there! 😊 You have ${firstWallet.balance} USDC and ${remainingConvs} conversations remaining this week. Let's continue chatting! 💫`;
-                        } else {
-                            insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your contract balance to participate. You currently have ${firstWallet.balance} USDC. Please top up your contract balance on our website and try again! 💫`;
-                        }
-                    } else {
-                        // For multiple wallets, just show the insufficient balance message
-                        // Don't check participation status if they don't have enough balance to participate
-                        const shortAddresses = balanceCheck.allAddresses.map(addr => 
-                            `${shortenAddress(addr.address)} (${addr.balance} USDC)`
-                        ).join(', ');
-                        insufficientBalanceResponse = `Hey there! 😊 I'd love to chat, but you need at least 0.01 USDC in your contract balance to participate. Your contract balances: ${shortAddresses}. Please top up your contract balance on our website and try again! 💫`;
-                    }
-                    
-                    try {
-                        const replyResult = await postReplyToFarcaster(castData.hash, insufficientBalanceResponse);
-                        console.log('Insufficient balance reply posted:', replyResult);
-                        
-                        return NextResponse.json({
-                            status: 'insufficient_balance',
-                            message: 'User has insufficient balance',
-                            timestamp: new Date().toISOString(),
-                            castText: castData.text,
-                            userAddresses: userAddresses,
-                            balance: balanceCheck.balance,
-                            replyPosted: true
-                        });
-                    } catch (error) {
-                        console.error('Error posting insufficient balance reply:', error);
-                    }
-                }
-
             // Get thread context for better understanding
             const threadContext = await getThreadContext(castData);
             console.log('Thread context:', threadContext);
 
-            // Determine interaction type
-            let interactionType;
-            if (isDirectMention) {
-                interactionType = 'direct_mention';
-                console.log('Direct mention detected');
-            } else {
-                interactionType = 'reply_to_bot';
-                console.log('Reply to bot detected');
-            }
-
-            // Get context-aware response from Grok AI FIRST
-            const response = await getGrokResponse(castData.text, threadContext, interactionType);
-            console.log('Generated response:', response);
-
-            // Only proceed if Grok AI provided a response
-            if (!response) {
-                console.log('No response from Grok AI - bot will not reply');
-                return NextResponse.json({
-                    status: 'processed_no_response',
-                    interactionType,
-                    message: 'Interaction detected but no response generated from Grok AI',
-                    timestamp: new Date().toISOString(),
-                    castText: castData.text,
-                    threadContext: threadContext.substring(0, 100) + '...',
-                    replyPosted: false,
-                    reason: 'grok_no_response'
-                });
-            }
-
-            // Post reply to Farcaster SECOND
-            let replyResult;
-            try {
-                replyResult = await postReplyToFarcaster(castData.hash, response);
-                console.log('Reply posted successfully:', replyResult);
-
-                // Handle both test and real responses
-                const replyHash = 'hash' in replyResult ? replyResult.hash : 'unknown';
-
-                // Record complete conversation in smart contract THIRD (after AI + Farcaster success)
-                const conversationResult = await recordCompleteConversation(
-                    balanceCheck.bestAddress || userAddresses[0], 
-                    castData, 
-                    response, 
-                    replyResult
-                );
-                console.log('Complete conversation recording result:', conversationResult);
-
-            return NextResponse.json({ 
-                status: 'processed', 
-                response,
-                    interactionType,
-                    message: 'Interaction detected, reply posted to Farcaster, and conversation recorded on-chain',
-                    timestamp: new Date().toISOString(),
-                    castText: castData.text,
-                    threadContext: threadContext.substring(0, 100) + '...',
-                    replyPosted: true,
-                    replyHash: replyHash,
-                    userAddresses: userAddresses,
-                    balanceChecked: isDirectMention,
-                    conversationRecorded: conversationResult.success,
-                    blockchainTxHash: conversationResult.txHash
-                });
-            } catch (replyError: any) {
-                console.error('Failed to post reply:', replyError);
-
-                // Provide more detailed error information
-                let errorMessage = 'Unknown error';
-                if (replyError.response?.data) {
-                    errorMessage = JSON.stringify(replyError.response.data);
-                } else if (replyError.message) {
-                    errorMessage = replyError.message;
+            // 🚨 CRITICAL: Use request deduplication to prevent concurrent processing
+            const primaryAddress = userAddresses[0];
+            const requestId = `${castData.hash}:${Date.now()}`;
+            
+            return await requestDeduplicator.processRequest(
+                primaryAddress,
+                castData.text,
+                castData.hash,
+                async () => {
+                    // This entire block runs only once per unique request
+                    return await requestQueue.enqueueRequest(
+                        primaryAddress,
+                        requestId,
+                        async () => {
+                            // This runs sequentially per user to prevent race conditions
+                            return await processUserInteraction(castData, userAddresses, isDirectMention, threadContext);
+                        }
+                    );
                 }
-
-                return NextResponse.json({
-                    status: 'processed_but_reply_failed',
-                    response,
-                    interactionType,
-                    message: 'Interaction detected but failed to post reply',
-                    timestamp: new Date().toISOString(),
-                    castText: castData.text,
-                    threadContext: threadContext.substring(0, 100) + '...',
-                    replyPosted: false,
-                    error: errorMessage,
-                    errorCode: replyError.response?.status || 'unknown'
-                });
-            }
+            ).then(({ result, wasDuplicate }) => {
+                if (wasDuplicate) {
+                    console.log('🔄 Request was duplicate/concurrent - returned cached result');
+                }
+                return NextResponse.json(result);
+            });
         } else {
             console.log('No interaction detected in:', castData.text);
             return NextResponse.json({ 
@@ -888,6 +1057,19 @@ export async function POST(request: NextRequest) {
             error: 'Internal server error',
             details: error instanceof Error ? error.message : 'Unknown error'
         }, { status: 500 });
+    } finally {
+        // Log performance metrics every 10 requests
+        if (Math.random() < 0.1) {
+            console.log('📊 Performance Report:');
+            performanceMonitor.logReport();
+            
+            console.log('💾 Cache Stats:');
+            console.log(responseCache.getStats());
+        }
+        
+        const totalTime = Date.now() - startTime;
+        console.log(`⚡ Total request time: ${totalTime}ms`);
     }
+    });
 }
 

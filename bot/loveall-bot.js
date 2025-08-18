@@ -2,8 +2,8 @@ require('dotenv').config();
 const { NeynarAPIClient, Configuration } = require('@neynar/nodejs-sdk');
 const { ethers } = require('ethers');
 
-// Contract ABI (we'll get this from artifacts)
-const contractABI = require('../artifacts/contracts/LoveallPrizePool.sol/LoveallPrizePool.json').abi;
+// Contract ABI (we'll get this from updated source)
+const contractABI = require('../src/abi.json');
 
 class LoveallBot {
     constructor() {
@@ -19,7 +19,7 @@ class LoveallBot {
         this.neynar = new NeynarAPIClient(config);
         
         // Initialize contract
-        this.contractAddress = '0x79C495b3F99EeC74ef06C79677Aee352F40F1De5';
+        this.contractAddress = '0x713DFCCE37f184a2aB3264D6DA5094Eae5F33dFa';
         
         // Use a more reliable RPC endpoint
         const rpcUrl = process.env.BASE_RPC_URL || 'https://mainnet.base.org';
@@ -75,15 +75,23 @@ class LoveallBot {
         }
     }
 
-    // Record user participation in cast
-    async recordParticipation(userAddress, castHash) {
+    // Record complete conversation (user cast + bot reply)
+    async recordCompleteConversation(userAddress, fid, userCastHash, botCastHash, conversationId, userCastContent, botReplyContent) {
         try {
-            const tx = await this.contract.participateInCast(userAddress, castHash);
+            const tx = await this.contract.recordCompleteConversation(
+                userAddress,
+                fid,
+                userCastHash,
+                botCastHash,
+                conversationId,
+                userCastContent,
+                botReplyContent
+            );
             await tx.wait();
-            console.log(`✅ Participation recorded for ${userAddress}`);
+            console.log(`✅ Complete conversation recorded for ${userAddress}`);
             return true;
         } catch (error) {
-            console.error('Error recording participation:', error);
+            console.error('Error recording complete conversation:', error);
             return false;
         }
     }
@@ -169,15 +177,32 @@ class LoveallBot {
                     await this.replyToCast(mention.hash, response);
                     console.log('⏰ User already participated this week');
                 } else {
-                    // Record participation
-                    const success = await this.recordParticipation(userAddress, mention.hash);
-                    if (success) {
-                        const response = this.generateFlirtyResponse();
-                        await this.replyToCast(mention.hash, response);
-                        console.log('✅ Participation recorded successfully');
+                    // Generate response and reply to cast
+                    const response = this.generateFlirtyResponse();
+                    const replyResult = await this.replyToCast(mention.hash, response);
+                    
+                    if (replyResult && replyResult.hash) {
+                        // Create conversation ID from the original mention hash
+                        const conversationId = ethers.keccak256(ethers.toUtf8Bytes(mention.hash));
+                        
+                        // Record complete conversation
+                        const success = await this.recordCompleteConversation(
+                            userAddress,
+                            mention.author.fid,
+                            mention.hash,
+                            replyResult.hash,
+                            conversationId,
+                            mention.text,
+                            response
+                        );
+                        
+                        if (success) {
+                            console.log('✅ Complete conversation recorded successfully');
+                        } else {
+                            console.log('❌ Failed to record conversation to contract');
+                        }
                     } else {
-                        await this.replyToCast(mention.hash, "Oops! Something went wrong! 😅 Please try again!");
-                        console.log('❌ Failed to record participation');
+                        console.log('❌ Failed to reply to cast');
                     }
                 }
 
@@ -192,14 +217,16 @@ class LoveallBot {
     // Reply to a cast
     async replyToCast(parentHash, text) {
         try {
-            await this.neynar.publishCast({
+            const result = await this.neynar.publishCast({
                 signer_uuid: process.env.NEYNAR_SIGNER_UUID,
                 text: text,
                 parent: parentHash
             });
             console.log(`💬 Replied: ${text}`);
+            return result.cast || result; // Return the cast object which should contain the hash
         } catch (error) {
             console.error('Error replying to cast:', error);
+            return null;
         }
     }
 

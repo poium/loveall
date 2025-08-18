@@ -1,0 +1,6 @@
+{
+  "_format": "hh-sol-artifact-1", 
+  "contractName": "LoveallPrizePool",
+  "sourceName": "contracts/LoveallPrizePool.sol",
+  "abi": $(cat contracts/abi.json)
+}

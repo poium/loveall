@@ -6,7 +6,7 @@ export async function GET() {
             status: 'running',
             service: 'loveall-bot',
             timestamp: new Date().toISOString(),
-            contract: '0x79C495b3F99EeC74ef06C79677Aee352F40F1De5',
+            contract: '0x713DFCCE37f184a2aB3264D6DA5094Eae5F33dFa',
             features: [
                 'mention-detection',
                 'response-generation',

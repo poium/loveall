@@ -36,6 +36,35 @@ interface CastParticipation {
   isEvaluated: boolean;
 }
 
+interface ConversationMessage {
+  castHash: string;
+  content: string;
+  isBot: boolean;
+  timestamp: number;
+}
+
+interface ConversationThread {
+  conversationId: string;
+  user: string;
+  fid: number;
+  messages: ConversationMessage[];
+  totalCost: string;
+  aiScore: number;
+  isEvaluated: boolean;
+  startTime: number;
+  lastActivity: number;
+  messageCount: number;
+}
+
+interface AICharacter {
+  name: string;
+  task: string;
+  traitNames: string[];
+  traitValues: number[];
+  traitCount: number;
+  isSet: boolean;
+}
+
 interface UserData {
   balance: string;
   hasSufficientBalance: boolean;
@@ -59,7 +88,7 @@ interface CharacterData {
 }
 
 // Contract addresses
-const CONTRACT_ADDRESS = '0x79C495b3F99EeC74ef06C79677Aee352F40F1De5';
+const CONTRACT_ADDRESS = '0x713DFCCE37f184a2aB3264D6DA5094Eae5F33dFa';
 const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
 // Contract ABI - imported from abi.json

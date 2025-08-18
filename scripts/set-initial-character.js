@@ -2,86 +2,60 @@ import pkg from "hardhat";
 const { ethers } = pkg;
 
 async function main() {
-  console.log("🎭 Setting initial AI character for Week 1...");
+  console.log("🎭 Setting initial weekly character...");
   
-  const CONTRACT_ADDRESS = "0x79C495b3F99EeC74ef06C79677Aee352F40F1De5";
+  const contractAddress = "0x713DFCCE37f184a2aB3264D6DA5094Eae5F33dFa";
+  const [deployer] = await ethers.getSigners();
   
-  // Get deployer (owner)
-  const [owner] = await ethers.getSigners();
-  console.log("👤 Owner address:", owner.address);
+  // Get contract instance
+  const contract = await ethers.getContractAt("LoveallPrizePool", contractAddress);
   
-  // Connect to contract
-  const LoveallPrizePool = await ethers.getContractFactory("LoveallPrizePool");
-  const contract = LoveallPrizePool.attach(CONTRACT_ADDRESS);
+  console.log("📋 Using contract:", contractAddress);
+  console.log("👤 Using account:", deployer.address);
   
-  // Check current week and character status
-  const commonData = await contract.getCommonData();
-  console.log("📅 Current week:", commonData.currentWeek.toString());
-  console.log("🎭 Character already set:", commonData.characterIsSet);
+  // Check if character is already set
+  const currentCharacter = await contract.getCurrentCharacter();
   
-  if (commonData.characterIsSet) {
-    console.log("⚠️  Character already set for this week!");
-    const character = await contract.getCurrentCharacter();
-    console.log("Current character:", character.name);
+  if (currentCharacter.isSet) {
+    console.log("ℹ️ Character already set for this week:");
+    console.log("- Name:", currentCharacter.name);
+    console.log("- Task:", currentCharacter.task);
+    console.log("- Traits:", currentCharacter.traitNames.slice(0, currentCharacter.traitCount));
     return;
   }
   
-  // Define first AI character - "Flirty Sales Expert"
-  const characterData = {
-    name: "Jordan Belfort", 
-    task: "Try to sell this pen to me through charming conversation",
-    traitNames: ["Charisma", "Confidence", "Playfulness", "Persuasion", "Charm"],
-    traitValues: [9, 8, 7, 10, 8], // Scale 1-10
-    traitCount: 5
-  };
+  // Set Loveall as the initial character
+  console.log("🎯 Setting initial character: Loveall");
   
-  console.log("\n🎭 Setting character:");
-  console.log("- Name:", characterData.name);
-  console.log("- Task:", characterData.task);
-  console.log("- Traits:");
-  for (let i = 0; i < characterData.traitNames.length; i++) {
-    console.log(`  • ${characterData.traitNames[i]}: ${characterData.traitValues[i]}/10`);
+  const tx = await contract.setWeeklyCharacter(
+    "Loveall",                                          // name
+    "Warm and engaging conversationalist who makes everyone feel special", // task  
+    ["Warmth", "Empathy", "Humor", "Curiosity", "Charm"], // trait names
+    [9, 8, 7, 8, 7],                                   // trait values (1-10)
+    5                                                   // trait count
+  );
+  
+  console.log("⏳ Transaction sent:", tx.hash);
+  await tx.wait();
+  
+  console.log("✅ Character set successfully!");
+  
+  // Verify the character was set
+  const verifyCharacter = await contract.getCurrentCharacter();
+  console.log("\n📊 Character Details:");
+  console.log("- Name:", verifyCharacter.name);
+  console.log("- Task:", verifyCharacter.task);
+  console.log("- Active Traits:");
+  for (let i = 0; i < verifyCharacter.traitCount; i++) {
+    console.log(`  • ${verifyCharacter.traitNames[i]}: ${verifyCharacter.traitValues[i]}/10`);
   }
   
-  // Set the character
-  try {
-    console.log("\n🔄 Calling setWeeklyCharacter...");
-    const tx = await contract.setWeeklyCharacter(
-      characterData.name,
-      characterData.task,
-      characterData.traitNames,
-      characterData.traitValues,
-      characterData.traitCount
-    );
-    
-    console.log("⏳ Transaction sent:", tx.hash);
-    const receipt = await tx.wait();
-    console.log("✅ Character set successfully!");
-    console.log("⛽ Gas used:", receipt.gasUsed.toString());
-    
-    // Verify the character was set
-    const updatedCommonData = await contract.getCommonData();
-    console.log("\n📊 Verification:");
-    console.log("- Character name:", updatedCommonData.characterName);
-    console.log("- Character task:", updatedCommonData.characterTask);
-    console.log("- Character set:", updatedCommonData.characterIsSet);
-    
-  } catch (error) {
-    console.error("❌ Error setting character:", error.message);
-    
-    if (error.message.includes("CharacterAlreadySet")) {
-      console.log("ℹ️  Character already set for this week");
-    } else if (error.message.includes("InvalidTaskLength")) {
-      console.log("ℹ️  Task length must be ≤ 255 characters");
-    } else if (error.message.includes("InvalidTraitCount")) {
-      console.log("ℹ️  Trait count must be 1-5");
-    }
-  }
+  console.log("\n🎉 Bot is ready to chat as Loveall!");
 }
 
 main()
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error("💥 Script failed:", error);
+    console.error("💥 Failed to set character:", error);
     process.exit(1);
   });

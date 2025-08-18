@@ -1,7 +1,7 @@
 const { run } = require("hardhat");
 
 async function main() {
-  const contractAddress = "0x79C495b3F99EeC74ef06C79677Aee352F40F1De5";
+  const contractAddress = "0x713DFCCE37f184a2aB3264D6DA5094Eae5F33dFa";
   const usdcAddress = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
   const ownerAddress = "0x462752537CcE212d278DBD361DA67e25C2908938";
 

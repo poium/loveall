@@ -3,7 +3,7 @@ import { ethers } from 'ethers';
 import contractABI from '../../../abi.json';
 
 // Contract configuration
-const CONTRACT_ADDRESS = '0x79C495b3F99EeC74ef06C79677Aee352F40F1De5';
+const CONTRACT_ADDRESS = '0x713DFCCE37f184a2aB3264D6DA5094Eae5F33dFa';
 const RPC_ENDPOINT = 'https://mainnet.base.org';
 
 function createProvider() {

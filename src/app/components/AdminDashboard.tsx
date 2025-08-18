@@ -5,14 +5,14 @@ import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagm
 import { parseUnits, formatUnits } from 'viem';
 
 // Contract addresses and ABIs
-const CONTRACT_ADDRESS = '0x79C495b3F99EeC74ef06C79677Aee352F40F1De5';
+const CONTRACT_ADDRESS = '0x713DFCCE37f184a2aB3264D6DA5094Eae5F33dFa';
 
 const CONTRACT_ABI = [
   {
-    name: 'setWeeklyWinner',
+    name: 'selectWinnerByAIScore',
     type: 'function',
     stateMutability: 'nonpayable',
-    inputs: [{ name: 'winner', type: 'address' }],
+    inputs: [],
     outputs: []
   },
   {
@@ -27,6 +27,31 @@ const CONTRACT_ABI = [
     type: 'function',
     stateMutability: 'nonpayable',
     inputs: [],
+    outputs: []
+  },
+  {
+    name: 'recordTopAIScores',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'topUsers', type: 'address[]' },
+      { name: 'topConversationIds', type: 'bytes32[]' },
+      { name: 'topAiScores', type: 'uint256[]' },
+      { name: 'totalEvaluated', type: 'uint256' }
+    ],
+    outputs: []
+  },
+  {
+    name: 'setWeeklyCharacter',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'name', type: 'string' },
+      { name: 'task', type: 'string' },
+      { name: 'traitNames', type: 'string[5]' },
+      { name: 'traitValues', type: 'uint8[5]' },
+      { name: 'traitCount', type: 'uint8' }
+    ],
     outputs: []
   }
 ];
@@ -66,7 +91,6 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [evaluations, setEvaluations] = useState<EvaluationResult[]>([]);
   const [evaluating, setEvaluating] = useState(false);
-  const [selectedWinner, setSelectedWinner] = useState<string>('');
   const [winnerLoading, setWinnerLoading] = useState(false);
   const [distributeLoading, setDistributeLoading] = useState(false);
   const [newWeekLoading, setNewWeekLoading] = useState(false);
@@ -101,7 +125,6 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (isWinnerSuccess) {
       setWinnerLoading(false);
-      setSelectedWinner('');
       fetchAdminData();
     }
   }, [isWinnerSuccess]);
@@ -166,21 +189,19 @@ export default function AdminDashboard() {
     }
   };
 
-  const setWeeklyWinner = async (winnerAddress: string) => {
-    if (!winnerAddress) return;
-    
+  const selectWinnerByAIScore = async () => {
     try {
       setWinnerLoading(true);
       
       writeContractWinner({
         address: CONTRACT_ADDRESS as `0x${string}`,
         abi: CONTRACT_ABI,
-        functionName: 'setWeeklyWinner',
-        args: [winnerAddress as `0x${string}`]
+        functionName: 'selectWinnerByAIScore',
+        args: []
       });
       
     } catch (error) {
-      console.error('Error setting winner:', error);
+      console.error('Error selecting winner:', error);
       setWinnerLoading(false);
     }
   };
@@ -318,24 +339,17 @@ export default function AdminDashboard() {
                       <div className="flex justify-between items-start mb-2">
                         <div>
                           <p className="text-white font-medium">
-                            {index + 1}. {eval.userAddress.slice(0, 6)}...{eval.userAddress.slice(-4)}
+                            {index + 1}. {evaluation.userAddress.slice(0, 6)}...{evaluation.userAddress.slice(-4)}
                           </p>
                           <p className="text-gray-400 text-sm">
-                            Score: {eval.evaluation.score}/50
+                            Score: {evaluation.evaluation.score}/50
                           </p>
                         </div>
-                                                 <button
-                           onClick={() => setSelectedWinner(evaluation.userAddress)}
-                           disabled={winnerLoading || isWinnerPending || isWinnerConfirming || evaluation.userAddress === '0x0000000000000000000000000000000000000000'}
-                           className={`px-3 py-1 rounded text-sm transition-colors ${
-                             winnerLoading || isWinnerPending || isWinnerConfirming || evaluation.userAddress === '0x0000000000000000000000000000000000000000'
-                               ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                               : 'bg-green-600 hover:bg-green-700 text-white'
-                           }`}
-                         >
-                           {winnerLoading && selectedWinner === evaluation.userAddress ? 'Setting...' : 
-                            evaluation.userAddress === '0x0000000000000000000000000000000000000000' ? 'Demo Mode' : 'Select Winner'}
-                         </button>
+                        {index === 0 && (
+                          <span className="px-3 py-1 rounded text-sm bg-yellow-600 text-white">
+                            Highest Score - Auto Winner
+                          </span>
+                        )}
                       </div>
                       
                                              <p className="text-gray-300 text-sm mb-2">
@@ -354,6 +368,20 @@ export default function AdminDashboard() {
                     </div>
                   ))}
                 </div>
+              )}
+              
+              {evaluations.length > 0 && (
+                <button
+                  onClick={selectWinnerByAIScore}
+                  disabled={winnerLoading || isWinnerPending || isWinnerConfirming}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                    winnerLoading || isWinnerPending || isWinnerConfirming
+                      ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                      : 'bg-green-600 hover:bg-green-700 text-white hover:scale-105'
+                  }`}
+                >
+                  {winnerLoading || isWinnerPending || isWinnerConfirming ? 'Selecting Winner...' : 'Select Winner by AI Score'}
+                </button>
               )}
             </div>
           </div>

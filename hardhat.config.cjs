@@ -11,6 +11,7 @@ module.exports = {
         enabled: true,
         runs: 200,
       },
+      viaIR: true, // Enable intermediate representation for stack too deep issues
     },
   },
   networks: {

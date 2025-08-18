@@ -3,7 +3,7 @@ const { ethers } = pkg;
 
 async function main() {
   console.log("🚀 Deploying LoveallPrizePool to Base Mainnet...");
-  console.log("⛽ Using Base optimized gas settings: 0.0003 Gwei (normal)");
+  console.log("⛽ Using current network gas price for reliable deployment");
 
   // Contract parameters for Base Mainnet
   const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"; // Base USDC
@@ -25,8 +25,8 @@ async function main() {
   const feeData = await deployer.provider.getFeeData();
   console.log("📊 Network gas price:", ethers.formatUnits(feeData.gasPrice || 0, "gwei"), "Gwei");
   
-  // Base optimized gas settings (0.0003 Gwei normal speed)
-  const gasPrice = ethers.parseUnits("0.0003", "gwei"); // Normal speed
+  // Use current network gas price for reliable deployment  
+  const gasPrice = feeData.gasPrice; // Use network's current gas price
   console.log("🎯 Using gas price:", ethers.formatUnits(gasPrice, "gwei"), "Gwei");
 
   // Deploy contract with optimized gas

@@ -49,7 +49,7 @@ async function testConnections() {
         
         // Test contract call
         const contractABI = require('../artifacts/contracts/LoveallPrizePool.sol/LoveallPrizePool.json').abi;
-        const contract = new ethers.Contract('0x79C495b3F99EeC74ef06C79677Aee352F40F1De5', contractABI, provider);
+        const contract = new ethers.Contract('0x713DFCCE37f184a2aB3264D6DA5094Eae5F33dFa', contractABI, provider);
         
         const commonData = await contract.getCommonData();
         console.log(`   ✅ Contract call successful - Current week: ${commonData.currentWeek}`);

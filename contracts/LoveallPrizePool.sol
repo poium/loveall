@@ -10,6 +10,21 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  * @title LoveallPrizePool
  * @dev Smart contract for managing the Loveall flirting bot prize pool
  * Users pay 0.01 USDC per cast, weekly winner gets 80% of pool, 10% rolls over, 10% protocol fee
+ * 
+ * SECURITY FEATURES:
+ * - ReentrancyGuard: Prevents reentrancy attacks
+ * - Pausable: Emergency pause functionality
+ * - Ownable: Owner-only admin functions
+ * - Input validation: All user inputs validated
+ * - Gas limits: Loops protected from gas limit attacks
+ * 
+ * OWNER PRIVILEGES:
+ * - Record conversations (bot integration)
+ * - Set AI scores and select winners
+ * - Pause/unpause contract
+ * - Set weekly characters
+ * - Emergency withdraw (disaster recovery)
+ * - Adjust cast cost
  */
 contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
     // USDC token contract
@@ -22,11 +37,13 @@ contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
     uint256 public constant PROTOCOL_FEE_PERCENTAGE = 10; // 10% protocol fee
     uint256 public constant MAX_CONVERSATIONS_PER_USER_PER_WEEK = 3; // Max 3 conversations per user per week
     uint256 public constant MAX_CASTS_PER_CONVERSATION = 10; // Max 10 casts per conversation
+    uint256 public constant MAX_MESSAGE_LENGTH = 2000; // Max 2000 characters per message (gas safety)
+    uint256 public constant MAX_CONVERSATION_LENGTH = 20000; // Max 20000 characters per conversation
     
     // Weekly cycle management
     uint256 public currentWeek;
     uint256 public weekStartTime;
-    uint256 public constant WEEK_DURATION = 2 hours;
+    uint256 public constant WEEK_DURATION = 7 days; // Changed from 2 hours for production
     
     // AI Character system
     struct AICharacter {
@@ -58,6 +75,10 @@ contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
     mapping(uint256 => mapping(address => uint256)) public userConversationCount; // Week → user → conversation count
     mapping(uint256 => mapping(bytes32 => uint256)) public conversationCastCount; // Week → conversationId → cast count
     
+    // Complete conversation storage
+    mapping(bytes32 => ConversationMessage[]) public conversationMessages; // conversationId → messages array
+    mapping(address => bytes32[]) public userConversationIds; // user → array of their conversation IDs
+    
     // Winner tracking
     mapping(uint256 => address) public weeklyWinners;
     mapping(uint256 => uint256) public weeklyPrizes;
@@ -75,10 +96,32 @@ contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
         bool isEvaluated; // Whether AI has evaluated this conversation
     }
     
+    // Struct for complete conversation message (user or bot)
+    struct ConversationMessage {
+        bytes32 castHash;        // Hash of the cast
+        string content;          // Actual message content
+        bool isBot;              // true = bot message, false = user message
+        uint256 timestamp;       // When message was sent
+    }
+    
+    // Struct for complete conversation thread
+    struct ConversationThread {
+        bytes32 conversationId;          // Unique conversation identifier
+        address user;                    // User who started the conversation
+        uint256 fid;                     // User's Farcaster ID
+        ConversationMessage[] messages;  // All messages in chronological order
+        uint256 totalCost;              // Total USDC spent in this conversation
+        uint256 aiScore;                 // Final AI evaluation score
+        bool isEvaluated;                // Whether conversation has been evaluated
+        uint256 startTime;               // First message timestamp
+        uint256 lastActivity;            // Last message timestamp
+        uint256 messageCount;            // Total number of messages
+    }
+    
     // Events
     event BalanceToppedUp(address indexed user, uint256 amount);
     event BalanceWithdrawn(address indexed user, uint256 amount);
-    event CastParticipated(address indexed user, uint256 fid, bytes32 castHash, bytes32 conversationId, uint256 cost, string castContent);
+    // Legacy event removed - using CompleteConversationRecorded for unified tracking
     event CompleteConversationRecorded(address indexed user, uint256 fid, bytes32 userCastHash, bytes32 botCastHash, bytes32 conversationId, uint256 cost, string userCastContent, string botReplyContent, uint256 timestamp);
     event AIEvaluationCompleted(address indexed user, uint256 fid, bytes32 conversationId, uint256 aiScore);
     event TopScoresRecorded(uint256 totalEvaluated, uint256 topScoresCount);
@@ -177,85 +220,7 @@ contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
         emit PrizePoolContribution(msg.sender, amount);
     }
     
-    /**
-     * @dev Participate in cast (called by bot)
-     * @param user User address (original cast author)
-     * @param fid Farcaster ID
-     * @param castHash Real cast hash from Farcaster
-     * @param conversationId Conversation/thread ID (derived from original cast)
-     * @param castContent Content of the cast (emitted as event parameter)
-     */
-    function participateInCast(address user, uint256 fid, bytes32 castHash, bytes32 conversationId, string calldata castContent) 
-        external 
-        whenNotPaused 
-        onlyOwner 
-    {
-        if (userBalances[user] < castCost) {
-            revert InsufficientBalance();
-        }
-        
-        // Check conversation limit for user
-        uint256 currentConversationCount = userConversationCount[currentWeek][user];
-        bool isNewConversation = true;
-        
-        // Check if this is a new conversation for the user
-        CastParticipation[] memory existingParticipations = weeklyParticipations[currentWeek][user];
-        for (uint256 i = 0; i < existingParticipations.length; i++) {
-            if (existingParticipations[i].conversationId == conversationId) {
-                isNewConversation = false;
-                break;
-            }
-        }
-        
-        // If this is a new conversation, check the limit
-        if (isNewConversation) {
-            if (currentConversationCount >= MAX_CONVERSATIONS_PER_USER_PER_WEEK) {
-                revert MaxConversationsReached();
-            }
-            userConversationCount[currentWeek][user] = currentConversationCount + 1;
-        }
-        
-        // Check cast limit for conversation
-        uint256 currentCastCount = conversationCastCount[currentWeek][conversationId];
-        if (currentCastCount >= MAX_CASTS_PER_CONVERSATION) {
-            revert MaxCastsPerConversationReached();
-        }
-        conversationCastCount[currentWeek][conversationId] = currentCastCount + 1;
-        
-        // Deduct balance and add to prize pool
-        userBalances[user] -= castCost;
-        currentWeekPrizePool += castCost;
-        totalPrizePool += castCost;
-        
-        // Track participation
-        CastParticipation memory participation = CastParticipation({
-            user: user,
-            fid: fid,
-            castHash: castHash,
-            conversationId: conversationId,
-            timestamp: block.timestamp,
-            weekNumber: currentWeek,
-            usdcAmount: castCost,
-            aiScore: 0, // Initialize with 0, will be set by AI evaluation
-            isEvaluated: false
-        });
-        
-        weeklyParticipations[currentWeek][user].push(participation);
-        
-        // Only add to participants list if this is their first participation this week
-        bool isFirstParticipation = true;
-        for (uint256 i = 0; i < weeklyParticipants[currentWeek].length; i++) {
-            if (weeklyParticipants[currentWeek][i] == user) {
-                isFirstParticipation = false;
-                break;
-            }
-        }
-        if (isFirstParticipation) {
-        weeklyParticipants[currentWeek].push(user);
-        }
-        
-        emit CastParticipated(user, fid, castHash, conversationId, castCost, castContent);
-    }
+    // Complete conversation recording replaces the legacy participation system
     
     /**
      * @dev Record complete conversation: user cast + bot reply in one transaction
@@ -284,26 +249,32 @@ contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
             revert InsufficientBalance();
         }
         
-        // Check conversation limit for user
-        uint256 currentConversationCount = userConversationCount[currentWeek][user];
-        bool isNewConversation = true;
-        
-        // Check if this is a new conversation for the user
-        CastParticipation[] memory existingParticipations = weeklyParticipations[currentWeek][user];
-        for (uint256 i = 0; i < existingParticipations.length; i++) {
-            if (existingParticipations[i].conversationId == conversationId) {
-                isNewConversation = false;
-                break;
-            }
+        // Validate message lengths to prevent gas limit issues
+        if (bytes(userCastContent).length > MAX_MESSAGE_LENGTH) {
+            revert("User message too long");
+        }
+        if (bytes(botReplyContent).length > MAX_MESSAGE_LENGTH) {
+            revert("Bot message too long");
         }
         
-        // If this is a new conversation, check the limit
-        if (isNewConversation) {
-            if (currentConversationCount >= MAX_CONVERSATIONS_PER_USER_PER_WEEK) {
-                revert MaxConversationsReached();
-            }
-            userConversationCount[currentWeek][user] = currentConversationCount + 1;
+        // Check total conversation length (gas-limited check)
+        ConversationMessage[] memory existingMessages = conversationMessages[conversationId];
+        uint256 totalExistingLength = 0;
+        uint256 messageCount = existingMessages.length;
+        
+        // Gas safety: limit to checking last 20 messages if conversation is very long
+        uint256 startIndex = messageCount > 20 ? messageCount - 20 : 0;
+        for (uint256 i = startIndex; i < messageCount; i++) {
+            totalExistingLength += bytes(existingMessages[i].content).length;
         }
+        
+        uint256 newContentLength = bytes(userCastContent).length + bytes(botReplyContent).length;
+        if (totalExistingLength + newContentLength > MAX_CONVERSATION_LENGTH) {
+            revert("Conversation too long");
+        }
+        
+        // Check conversation limit for user (optimized to reduce stack depth)
+        _validateConversationLimits(user, conversationId);
         
         // Check cast limit for conversation
         uint256 currentCastCount = conversationCastCount[currentWeek][conversationId];
@@ -315,6 +286,7 @@ contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
         // Deduct balance and add to prize pool
         userBalances[user] -= castCost;
         currentWeekPrizePool += castCost;
+        totalPrizePool += castCost;
         
         // Create participation record (using user cast hash for compatibility)
         CastParticipation memory participation = CastParticipation({
@@ -343,6 +315,28 @@ contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
             weeklyParticipants[currentWeek].push(user);
         }
         
+        // Store conversation messages for easy retrieval
+        if (conversationMessages[conversationId].length == 0) {
+            // First message in conversation - add user to conversation list
+            userConversationIds[user].push(conversationId);
+        }
+        
+        // Add user message
+        conversationMessages[conversationId].push(ConversationMessage({
+            castHash: userCastHash,
+            content: userCastContent,
+            isBot: false,
+            timestamp: block.timestamp
+        }));
+        
+        // Add bot reply message
+        conversationMessages[conversationId].push(ConversationMessage({
+            castHash: botCastHash,
+            content: botReplyContent,
+            isBot: true,
+            timestamp: block.timestamp
+        }));
+        
         // Emit complete conversation event with both user and bot content
         emit CompleteConversationRecorded(
             user, 
@@ -355,6 +349,33 @@ contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
             botReplyContent, 
             block.timestamp
         );
+    }
+    
+    /**
+     * @dev Internal function to validate conversation limits (reduces stack depth)
+     * @param user User address
+     * @param conversationId Conversation ID to check
+     */
+    function _validateConversationLimits(address user, bytes32 conversationId) internal {
+        uint256 currentConversationCount = userConversationCount[currentWeek][user];
+        bool isNewConversation = true;
+        
+        // Check if this is a new conversation for the user
+        CastParticipation[] memory existingParticipations = weeklyParticipations[currentWeek][user];
+        for (uint256 i = 0; i < existingParticipations.length; i++) {
+            if (existingParticipations[i].conversationId == conversationId) {
+                isNewConversation = false;
+                break;
+            }
+        }
+        
+        // If this is a new conversation, check the limit
+        if (isNewConversation) {
+            if (currentConversationCount >= MAX_CONVERSATIONS_PER_USER_PER_WEEK) {
+                revert MaxConversationsReached();
+            }
+            userConversationCount[currentWeek][user] = currentConversationCount + 1;
+        }
     }
 
     
@@ -378,6 +399,7 @@ contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
         );
         
         require(topUsers.length <= 10, "Maximum 10 top scores allowed");
+        require(totalEvaluated <= 1000, "Too many evaluations in single transaction"); // Gas safety
         
         for (uint256 i = 0; i < topUsers.length; i++) {
             if (topAiScores[i] > 50) revert InvalidAIScore();
@@ -869,6 +891,75 @@ contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
         castCost = newCastCost;
         
         emit CastCostUpdated(oldCastCost, newCastCost);
+    }
+    
+    /**
+     * @dev Get all conversations for a specific user with complete content
+     * @param user User address to get conversations for
+     * @return Array of complete conversation threads with all messages
+     */
+    function getUserConversations(address user) external view returns (ConversationThread[] memory) {
+        bytes32[] memory userConversations = userConversationIds[user];
+        ConversationThread[] memory threads = new ConversationThread[](userConversations.length);
+        
+        for (uint256 i = 0; i < userConversations.length; i++) {
+            bytes32 conversationId = userConversations[i];
+            ConversationMessage[] memory messages = conversationMessages[conversationId];
+            
+            // Calculate conversation metadata
+            uint256 startTime = messages.length > 0 ? messages[0].timestamp : 0;
+            uint256 lastActivity = messages.length > 0 ? messages[messages.length - 1].timestamp : 0;
+            uint256 totalCost = 0;
+            uint256 aiScore = 0;
+            bool isEvaluated = false;
+            uint256 userFid = 0;
+            
+            // Get cost and AI score from participations
+            CastParticipation[] memory participations = weeklyParticipations[currentWeek][user];
+            for (uint256 j = 0; j < participations.length; j++) {
+                if (participations[j].conversationId == conversationId) {
+                    totalCost += participations[j].usdcAmount;
+                    if (participations[j].aiScore > aiScore) {
+                        aiScore = participations[j].aiScore;
+                    }
+                    isEvaluated = participations[j].isEvaluated;
+                    userFid = participations[j].fid;
+                }
+            }
+            
+            threads[i] = ConversationThread({
+                conversationId: conversationId,
+                user: user,
+                fid: userFid,
+                messages: messages,
+                totalCost: totalCost,
+                aiScore: aiScore,
+                isEvaluated: isEvaluated,
+                startTime: startTime,
+                lastActivity: lastActivity,
+                messageCount: messages.length
+            });
+        }
+        
+        return threads;
+    }
+    
+    /**
+     * @dev Get a specific conversation by ID with all messages
+     * @param conversationId The conversation ID to retrieve
+     * @return Complete conversation thread with all messages
+     */
+    function getConversation(bytes32 conversationId) external view returns (ConversationMessage[] memory) {
+        return conversationMessages[conversationId];
+    }
+    
+    /**
+     * @dev Get conversation count for a user
+     * @param user User address
+     * @return Number of conversations the user has participated in
+     */
+    function getUserConversationCount(address user) external view returns (uint256) {
+        return userConversationIds[user].length;
     }
     
     /**
