@@ -681,12 +681,11 @@ export async function POST(request: NextRequest) {
                 });
             }
 
-            // Check user's balance (only for direct mentions, not replies)
-            if (isDirectMention) {
-                const balanceCheck = await checkUserBalance(userAddresses);
-                console.log('Balance check result:', balanceCheck);
+            // Check user's balance for both direct mentions and replies
+            const balanceCheck = await checkUserBalance(userAddresses);
+            console.log('Balance check result:', balanceCheck);
 
-                if (!balanceCheck.hasBalance) {
+            if (!balanceCheck.hasBalance) {
                     console.log('User cannot participate - checking reasons');
                     
                     // Create a message based on the specific issue
@@ -746,10 +745,9 @@ export async function POST(request: NextRequest) {
                     }
                 }
 
-                // Record participation in smart contract using the best address
-                const participationResult = await recordParticipation(balanceCheck.bestAddress || userAddresses[0], castData);
-                console.log('Participation recording result:', participationResult);
-            }
+            // Record participation in smart contract using the best address
+            const participationResult = await recordParticipation(balanceCheck.bestAddress || userAddresses[0], castData);
+            console.log('Participation recording result:', participationResult);
 
             // Get thread context for better understanding
             const threadContext = await getThreadContext(castData);
