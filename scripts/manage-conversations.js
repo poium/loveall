@@ -1,5 +1,8 @@
-require('dotenv').config();
-const { ethers } = require('ethers');
+import 'dotenv/config';
+import { ethers } from 'ethers';
+import fs from 'fs';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 
 // Contract configuration
 const CONTRACT_ADDRESS = '0x713DFCCE37f184a2aB3264D6DA5094Eae5F33dFa';
@@ -295,7 +298,6 @@ Top scores JSON format:
                 return;
             }
             try {
-                const fs = require('fs');
                 const topScoresData = JSON.parse(fs.readFileSync(args[1], 'utf8'));
                 await recordTopScores(topScoresData);
             } catch (error) {

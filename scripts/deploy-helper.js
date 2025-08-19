@@ -1,5 +1,8 @@
-require('dotenv').config();
-const { ethers } = require('ethers');
+import 'dotenv/config';
+import { ethers } from 'ethers';
+import fs from 'fs';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 
 // Network configurations
 const NETWORKS = {
@@ -98,7 +101,6 @@ async function deployContract(networkKey = 'base-mainnet') {
             timestamp: new Date().toISOString()
         };
         
-        const fs = require('fs');
         const deploymentFile = `deployment-${networkKey}-${Date.now()}.json`;
         fs.writeFileSync(deploymentFile, JSON.stringify(deploymentInfo, null, 2));
         console.log(`📄 Deployment info saved to: ${deploymentFile}`);
