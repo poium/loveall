@@ -427,10 +427,21 @@ function getUserVerifiedAddresses(castData: any): string[] {
     try {
         const addresses: string[] = [];
         
-        // Get all verified addresses from the cast author
+        // PRIORITIZE PRIMARY ADDRESS FIRST
+        const primaryAddress = castData.author?.verified_addresses?.primary?.eth_address;
+        if (primaryAddress) {
+            addresses.push(primaryAddress);
+            console.log('🎯 Using primary address first:', primaryAddress);
+        }
+        
+        // Get all other verified addresses (but skip the primary if already added)
         const verifiedAddresses = castData.author?.verified_addresses?.eth_addresses;
         if (verifiedAddresses && verifiedAddresses.length > 0) {
-            addresses.push(...verifiedAddresses);
+            for (const addr of verifiedAddresses) {
+                if (!addresses.includes(addr)) {
+                    addresses.push(addr);
+                }
+            }
         }
         
         // Add custody address as fallback if no verified addresses
