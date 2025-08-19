@@ -29,15 +29,8 @@ const CONTRACT_ADDRESS = '0x713DFCCE37f184a2aB3264D6DA5094Eae5F33dFa'; // Loveal
 const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'; // USDC on Base
 // Cast cost is now dynamic and fetched from contract
 
-// Contract ABI (updated for new unified conversation functions)
-const CONTRACT_ABI = [
-    'function getUserData(address user) external view returns (tuple(uint256 balance, bool hasSufficientBalance, bool hasParticipatedThisWeek, uint256 participationsCount, uint256 conversationCount, uint256 remainingConversations, uint256 bestScore, bytes32 bestConversationId, uint256 totalContributions))',
-    'function recordCompleteConversation(address user, uint256 fid, bytes32 userCastHash, bytes32 botCastHash, bytes32 conversationId, string userCastContent, string botReplyContent) external',
-    'function getCommonData() external view returns (tuple(uint256 totalPrizePool, uint256 currentWeekPrizePool, uint256 rolloverAmount, uint256 totalContributions, uint256 totalProtocolFees, uint256 castCost, uint256 currentWeek, uint256 weekStartTime, uint256 weekEndTime, uint256 currentWeekParticipantsCount, address currentWeekWinner, uint256 currentWeekPrize, string characterName, string characterTask, bool characterIsSet))',
-    'function getCurrentCharacter() external view returns (tuple(string name, string task, string[5] traitNames, uint8[5] traitValues, uint8 traitCount, bool isSet))',
-    'function setCastCost(uint256 newCastCost) external',
-    'function owner() external view returns (address)'
-];
+// Contract ABI (use full ABI for better compatibility)
+const CONTRACT_ABI = require('@/abi.json');
 
 // USDC ABI (simplified)
 const USDC_ABI = [
