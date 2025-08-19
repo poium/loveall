@@ -122,6 +122,7 @@ export default function Home() {
   const characterFetchInProgress = useRef(false);
   const [refreshDisabled, setRefreshDisabled] = useState(false);
   const [refreshCountdown, setRefreshCountdown] = useState(0);
+  const [timeRemaining, setTimeRemaining] = useState({ text: '', days: 0, hours: 0, minutes: 0, seconds: 0, ended: false });
   const [topUpAmount, setTopUpAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [approvalAmount, setApprovalAmount] = useState('');
@@ -187,6 +188,17 @@ export default function Home() {
       fetchUserData();
     }
   }, [isConnected, address]);
+
+  // Real-time countdown timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (prizePoolData) {
+        setTimeRemaining(getTimeUntilNextWeek());
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [prizePoolData]);
 
   // Handle transaction success
   useEffect(() => {
@@ -483,29 +495,32 @@ export default function Home() {
   };
 
   const getTimeUntilNextWeek = () => {
-    if (!prizePoolData) return '';
+    if (!prizePoolData) return { text: '', days: 0, hours: 0, minutes: 0, seconds: 0, ended: false };
     
     const now = Date.now();
-    const weekEnd = prizePoolData.weekEndTime * 1000; // Convert to milliseconds
+    const weekEnd = prizePoolData.weekEndTime; // Already in milliseconds from contract
     const timeLeft = weekEnd - now;
     
-    if (timeLeft <= 0) return 'New week starting soon!';
+    if (timeLeft <= 0) {
+      return { text: 'WINNER SELECTION TIME!', days: 0, hours: 0, minutes: 0, seconds: 0, ended: true };
+    }
     
     const days = Math.floor(timeLeft / (24 * 60 * 60 * 1000));
     const hours = Math.floor((timeLeft % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
     const minutes = Math.floor((timeLeft % (60 * 60 * 1000)) / (60 * 1000));
+    const seconds = Math.floor((timeLeft % (60 * 1000)) / 1000);
     
     if (days > 0) {
-    return `${days}d ${hours}h remaining`;
+      return { text: `${days}d ${hours}h ${minutes}m remaining`, days, hours, minutes, seconds, ended: false };
     } else if (hours > 0) {
-      return `${hours}h ${minutes}m remaining`;
+      return { text: `${hours}h ${minutes}m ${seconds}s remaining`, days, hours, minutes, seconds, ended: false };
     } else {
-      return `${minutes}m remaining`;
+      return { text: `${minutes}m ${seconds}s remaining`, days, hours, minutes, seconds, ended: false };
     }
   };
 
   const formatTimestamp = (timestamp: number) => {
-    return new Date(timestamp * 1000).toLocaleString();
+    return new Date(timestamp).toLocaleString();
   };
 
   const getNextCharacterUpdate = () => {
@@ -559,6 +574,88 @@ export default function Home() {
           </div>
         </div>
       </header>
+
+      {/* Big Countdown Timer - Hero Section */}
+      <div className="bg-gradient-to-r from-pink-900/50 via-purple-900/50 to-indigo-900/50 backdrop-blur-sm border-b border-purple-500/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="text-center">
+            <h2 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent mb-4">
+              Week {prizePoolData?.currentWeek || 1} Competition
+            </h2>
+            
+            {timeRemaining.ended ? (
+              <div className="animate-pulse">
+                <div className="text-3xl md:text-5xl font-bold text-red-400 mb-4">
+                  🏆 WINNER SELECTION TIME! 🏆
+                </div>
+                <div className="text-xl text-gray-300">
+                  Contest ended • Selecting winner by AI scores
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="text-lg md:text-xl text-gray-300 mb-6">
+                  Time Remaining Until Winner Selection
+                </div>
+                
+                <div className="flex justify-center items-center space-x-4 md:space-x-8 mb-6">
+                  {timeRemaining.days > 0 && (
+                    <div className="text-center">
+                      <div className="text-4xl md:text-6xl font-bold text-pink-400 bg-gray-800/80 rounded-2xl px-4 py-2 md:px-6 md:py-4 border border-pink-500/30">
+                        {timeRemaining.days}
+                      </div>
+                      <div className="text-sm md:text-base text-gray-400 mt-2">DAYS</div>
+                    </div>
+                  )}
+                  
+                  <div className="text-center">
+                    <div className="text-4xl md:text-6xl font-bold text-purple-400 bg-gray-800/80 rounded-2xl px-4 py-2 md:px-6 md:py-4 border border-purple-500/30">
+                      {timeRemaining.hours.toString().padStart(2, '0')}
+                    </div>
+                    <div className="text-sm md:text-base text-gray-400 mt-2">HOURS</div>
+                  </div>
+                  
+                  <div className="text-center">
+                    <div className="text-4xl md:text-6xl font-bold text-indigo-400 bg-gray-800/80 rounded-2xl px-4 py-2 md:px-6 md:py-4 border border-indigo-500/30">
+                      {timeRemaining.minutes.toString().padStart(2, '0')}
+                    </div>
+                    <div className="text-sm md:text-base text-gray-400 mt-2">MINUTES</div>
+                  </div>
+                  
+                  <div className="text-center">
+                    <div className="text-4xl md:text-6xl font-bold text-cyan-400 bg-gray-800/80 rounded-2xl px-4 py-2 md:px-6 md:py-4 border border-cyan-500/30">
+                      {timeRemaining.seconds.toString().padStart(2, '0')}
+                    </div>
+                    <div className="text-sm md:text-base text-gray-400 mt-2">SECONDS</div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-center items-center space-x-6 text-lg md:text-xl">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-2xl">💰</span>
+                    <span className="text-white font-bold">{formatUSDC(prizePoolData?.currentWeekPrizePool || '0')} USDC</span>
+                    <span className="text-gray-400">Prize Pool</span>
+                  </div>
+                  <div className="text-gray-500">•</div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-2xl">👥</span>
+                    <span className="text-white font-bold">{prizePoolData?.currentWeekParticipantsCount || 0}</span>
+                    <span className="text-gray-400">Participants</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div className="mt-8 text-center">
+              <div className="inline-flex items-center space-x-2 bg-gray-800/80 rounded-full px-6 py-3 border border-purple-500/30">
+                <span className="text-2xl">🤖</span>
+                <span className="text-white font-medium">AI Character:</span>
+                <span className="text-purple-400 font-bold">{characterData?.name || 'Loading...'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -646,14 +743,14 @@ export default function Home() {
                     </p>
               </div>
               
-              {/* Time Remaining */}
+              {/* Week End Time */}
                   <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 rounded-xl p-4 border border-green-500/20">
                     <div className="text-lg font-bold text-green-400 mb-1">
-                  {getTimeUntilNextWeek()}
+                      {prizePoolData ? new Date(prizePoolData.weekEndTime).toLocaleDateString() : 'Loading...'}
                     </div>
-                    <p className="text-gray-300 text-sm font-medium">Until Next Winner</p>
+                    <p className="text-gray-300 text-sm font-medium">Week End Date</p>
                     <p className="text-gray-400 text-xs mt-1">
-                      Time remaining in current weekly cycle
+                      When the current week ends
                     </p>
                   </div>
 
