@@ -635,15 +635,27 @@ export default function Home() {
                  alt="Jordan Belfort" 
                  className="w-32 h-32 md:w-40 md:h-40 object-cover"
                />
+                <div className="flex items-center justify-center">
+                   <div className="inline-flex items-center space-x-3 bg-primary/10 border border-primary/20 rounded-full px-6 py-3">
+                     <span className="text-sm text-muted-foreground font-medium">This week character:</span>
+                     <span className="bg-primary text-primary-foreground px-4 py-1 rounded-full text-sm font-semibold">
+                       Jordan Belfort
+                     </span>
+                   </div>
+                 </div>
                
                <div className="space-y-4">
                  <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl text-foreground">
-                   Text rich AI people. Get richer.
+                   Convince the AI. Win the Money.
                  </h1>
                  
                  <p className="text-xl md:text-2xl text-muted-foreground max-w-4xl mx-auto">
-                   Every message costs $1. Every reply might change your net worth.
+                   Every message costs $1 and goes into the prize pool.
+                   Everyone tries to persuade the AI — beg, flirt, threaten, whatever works.
+                   When the chat ends, the AI picks one winner to get all the money
                  </p>
+                 
+                
                </div>
              </div>
            </div>
