@@ -210,42 +210,42 @@ export default function ChatPage() {
   // Show loading state during hydration to prevent mismatch
   if (!isMounted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50">
-        <header className="bg-white/80 backdrop-blur-sm border-b border-purple-200">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-4">
+      <div className="min-h-screen bg-background">
+        <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="container flex h-14 items-center">
+            <div className="mr-4 hidden md:flex">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">❤️</span>
+                <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center">
+                  <span className="text-primary-foreground font-bold">❤️</span>
                 </div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+                <h1 className="text-xl font-bold text-foreground">
                   Loveall
                 </h1>
               </div>
-              
-              <nav className="hidden md:flex items-center space-x-6">
-                <a 
-                  href="/" 
-                  className="text-gray-600 hover:text-gray-800 transition-colors duration-200 font-medium"
-                >
-                  Dashboard
-                </a>
-                <a 
-                  href="/chat" 
-                  className="text-purple-600 hover:text-purple-800 transition-colors duration-200 font-medium flex items-center space-x-1"
-                >
-                  <span>💬</span>
-                  <span>Chat History</span>
-                </a>
-              </nav>
             </div>
+            
+            <nav className="flex items-center space-x-6 text-sm font-medium">
+              <a 
+                href="/" 
+                className="transition-colors hover:text-foreground/80 text-muted-foreground"
+              >
+                Dashboard
+              </a>
+              <a 
+                href="/chat" 
+                className="transition-colors hover:text-foreground/80 text-foreground flex items-center space-x-1"
+              >
+                <span>💬</span>
+                <span>Chat History</span>
+              </a>
+            </nav>
           </div>
         </header>
 
-        <div className="max-w-6xl mx-auto p-4">
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-            <p className="mt-2 text-gray-600">Loading...</p>
+        <div className="container py-8">
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <p className="mt-4 text-muted-foreground">Loading...</p>
           </div>
         </div>
       </div>
@@ -254,46 +254,46 @@ export default function ChatPage() {
 
   if (!address) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50">
-        {/* Header */}
-        <header className="bg-white/80 backdrop-blur-sm border-b border-purple-200">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-4">
+      <div className="min-h-screen bg-background">
+        <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="container flex h-14 items-center">
+            <div className="mr-4 hidden md:flex">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">❤️</span>
+                <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center">
+                  <span className="text-primary-foreground font-bold">❤️</span>
                 </div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+                <h1 className="text-xl font-bold text-foreground">
                   Loveall
                 </h1>
               </div>
-              
-              {/* Navigation */}
-              <nav className="hidden md:flex items-center space-x-6">
-                <a 
-                  href="/" 
-                  className="text-gray-600 hover:text-gray-800 transition-colors duration-200 font-medium"
-                >
-                  Dashboard
-                </a>
-                <a 
-                  href="/chat" 
-                  className="text-purple-600 hover:text-purple-800 transition-colors duration-200 font-medium flex items-center space-x-1"
-                >
-                  <span>💬</span>
-                  <span>Chat History</span>
-                </a>
-              </nav>
             </div>
+            
+            <nav className="flex items-center space-x-6 text-sm font-medium">
+              <a 
+                href="/" 
+                className="transition-colors hover:text-foreground/80 text-muted-foreground"
+              >
+                Dashboard
+              </a>
+              <a 
+                href="/chat" 
+                className="transition-colors hover:text-foreground/80 text-foreground flex items-center space-x-1"
+              >
+                <span>💬</span>
+                <span>Chat History</span>
+              </a>
+            </nav>
           </div>
         </header>
 
-        <div className="max-w-4xl mx-auto p-4">
-          <div className="text-center py-12">
-            <h1 className="text-3xl font-bold text-gray-800 mb-4">💬 Chat History</h1>
-            <p className="text-gray-600 mb-8">View your conversation history with the Loveall bot</p>
-            <div className="bg-white rounded-lg p-8 shadow-lg">
-              <p className="text-lg text-gray-600">Please connect your wallet to view your chat history</p>
+        <div className="container py-12">
+          <div className="flex flex-col items-center justify-center space-y-8">
+            <div className="text-center space-y-4">
+              <h1 className="text-4xl font-bold text-foreground">💬 Chat History</h1>
+              <p className="text-muted-foreground text-lg">View your conversation history with the Loveall bot</p>
+            </div>
+            <div className="card p-8 max-w-md w-full text-center">
+              <p className="text-card-foreground">Please connect your wallet to view your chat history</p>
             </div>
           </div>
         </div>
@@ -304,62 +304,60 @@ export default function ChatPage() {
   const selectedConv = conversations.find(c => c.conversationId === selectedConversation);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-purple-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
+    <div className="min-h-screen bg-background">
+      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-14 items-center">
+          <div className="mr-4 hidden md:flex">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-lg">❤️</span>
+              <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center">
+                <span className="text-primary-foreground font-bold">❤️</span>
               </div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-xl font-bold text-foreground">
                 Loveall
               </h1>
             </div>
-            
-            {/* Navigation */}
-            <nav className="hidden md:flex items-center space-x-6">
-              <a 
-                href="/" 
-                className="text-gray-600 hover:text-gray-800 transition-colors duration-200 font-medium"
-              >
-                Dashboard
-              </a>
-              <a 
-                href="/chat" 
-                className="text-purple-600 hover:text-purple-800 transition-colors duration-200 font-medium flex items-center space-x-1"
-              >
-                <span>💬</span>
-                <span>Chat History</span>
-              </a>
-            </nav>
           </div>
+          
+          <nav className="flex items-center space-x-6 text-sm font-medium">
+            <a 
+              href="/" 
+              className="transition-colors hover:text-foreground/80 text-muted-foreground"
+            >
+              Dashboard
+            </a>
+            <a 
+              href="/chat" 
+              className="transition-colors hover:text-foreground/80 text-foreground flex items-center space-x-1"
+            >
+              <span>💬</span>
+              <span>Chat History</span>
+            </a>
+          </nav>
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto p-4">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-4">💬 Chat History</h1>
-          <p className="text-gray-600">Your conversation history with the Loveall bot</p>
+      <div className="container py-8 space-y-8">
+        <div className="text-center space-y-4">
+          <h1 className="text-4xl font-bold text-foreground">💬 Chat History</h1>
+          <p className="text-muted-foreground text-lg">Your conversation history with the Loveall bot</p>
           {isMounted && address && (
-            <p className="text-sm text-gray-500 mt-2">Connected: {truncateAddress(address)}</p>
+            <p className="text-sm text-muted-foreground">Connected: {truncateAddress(address)}</p>
           )}
         </div>
 
         {loading && (
-          <div className="text-center py-8">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-            <p className="mt-2 text-gray-600">Loading conversations...</p>
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <p className="mt-4 text-muted-foreground">Loading conversations...</p>
           </div>
         )}
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-red-800">Error: {error}</p>
+          <div className="card border-destructive bg-destructive/5 p-4">
+            <p className="text-destructive font-medium">Error: {error}</p>
             <button 
               onClick={fetchUserConversations}
-              className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              className="btn-primary mt-4"
             >
               Retry
             </button>
@@ -369,48 +367,48 @@ export default function ChatPage() {
         {!loading && !error && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Conversations List */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">
+            <div className="card p-6 space-y-4">
+              <h2 className="text-xl font-semibold text-card-foreground">
                 Your Conversations ({conversations.length})
               </h2>
               
               {conversations.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <p>No conversations found</p>
-                  <p className="text-sm mt-2">Start chatting with @loveall on Farcaster!</p>
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <p className="text-muted-foreground">No conversations found</p>
+                  <p className="text-sm text-muted-foreground mt-2">Start chatting with @loveall on Farcaster!</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {conversations.map((conv) => (
                     <div 
                       key={conv.conversationId}
-                      className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                      className={`border rounded-lg p-4 cursor-pointer transition-all hover-lift ${
                         selectedConversation === conv.conversationId 
-                          ? 'border-purple-500 bg-purple-50' 
-                          : 'border-gray-200 hover:border-purple-300'
+                          ? 'border-primary bg-accent' 
+                          : 'border-border hover:border-primary/50'
                       }`}
                       onClick={() => setSelectedConversation(conv.conversationId)}
                     >
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-medium text-gray-800">
+                      <div className="flex justify-between items-start mb-3">
+                        <h3 className="font-medium text-card-foreground">
                           Conversation {truncateConversationId(conv.conversationId)}
                         </h3>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-muted-foreground">
                           {formatTimestamp(conv.lastActivity)}
                         </span>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                      <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
                         <div>
-                          <span className="font-medium">{conv.totalCasts}</span> casts
+                          <span className="font-medium text-card-foreground">{conv.totalCasts}</span> casts
                         </div>
                         <div>
-                          <span className="font-medium">{conv.totalSpent}</span> USDC
+                          <span className="font-medium text-card-foreground">{conv.totalSpent}</span> USDC
                         </div>
                         <div>
-                          Score: <span className="font-medium">{conv.averageScore}</span>
+                          Score: <span className="font-medium text-card-foreground">{conv.averageScore}</span>
                         </div>
-                        <div>
+                        <div className="col-span-2 text-xs">
                           Started: {formatTimestamp(conv.startTime)}
                         </div>
                       </div>
@@ -421,21 +419,21 @@ export default function ChatPage() {
             </div>
 
             {/* Chat View */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">
+            <div className="card p-6 space-y-4">
+              <h2 className="text-xl font-semibold text-card-foreground">
                 {selectedConv ? `Chat: ${truncateConversationId(selectedConv.conversationId)}` : 'Select a Conversation'}
               </h2>
               
               {!selectedConv ? (
-                <div className="text-center py-12 text-gray-500">
-                  <p>Select a conversation from the list to view the chat history</p>
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <p className="text-muted-foreground">Select a conversation from the list to view the chat history</p>
                 </div>
               ) : (
                 <div className="space-y-4 max-h-96 overflow-y-auto">
                   {selectedConv.casts.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <p>No cast content available</p>
-                      <p className="text-sm mt-2">Cast content may not be accessible</p>
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <p className="text-muted-foreground">No cast content available</p>
+                      <p className="text-sm text-muted-foreground mt-2">Cast content may not be accessible</p>
                     </div>
                   ) : (
                     selectedConv.casts
@@ -449,14 +447,14 @@ export default function ChatPage() {
                           key={cast.hash}
                           className={`flex ${isBot ? 'justify-start' : 'justify-end'}`}
                         >
-                                                      <div 
-                            className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                          <div 
+                            className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg space-y-2 ${
                               isBot 
-                                ? 'bg-pink-100 text-gray-800 border-l-4 border-pink-400' 
-                                : 'bg-purple-600 text-white'
+                                ? 'bg-muted border-l-4 border-primary' 
+                                : 'bg-primary text-primary-foreground'
                             }`}
                           >
-                            <div className="flex items-center mb-1">
+                            <div className="flex items-center">
                               <img 
                                 src={cast.author.pfp_url} 
                                 alt={cast.author.display_name}
@@ -464,24 +462,24 @@ export default function ChatPage() {
                               />
                               <span className="text-sm font-medium">
                                 {cast.author.display_name}
-                                {isBot && <span className="ml-1 text-pink-600">🤖</span>}
+                                {isBot && <span className="ml-1">🤖</span>}
                               </span>
                             </div>
                             
-                            <p className="text-sm mb-2">{cast.text}</p>
+                            <p className="text-sm leading-relaxed">{cast.text}</p>
                             
-                            <div className="text-xs opacity-75">
-                              {formatTimestamp(cast.timestamp)}
+                            <div className="text-xs opacity-75 space-y-1">
+                              <div>{formatTimestamp(cast.timestamp)}</div>
                               {participation && (
-                                <span className="ml-2">
-                                  • {participation.usdcAmount} USDC
+                                <div className="flex items-center space-x-2 text-xs">
+                                  <span>• {participation.usdcAmount} USDC</span>
                                   {participation.isEvaluated && (
-                                    <span className="ml-1">• Score: {participation.aiScore}</span>
+                                    <span>• Score: {participation.aiScore}</span>
                                   )}
-                                </span>
+                                </div>
                               )}
                               {cast.source === 'blockchain' && (
-                                <span className="ml-2 text-blue-600 font-medium">• 🔗 On-chain</span>
+                                <div className="text-primary font-medium">• 🔗 On-chain</div>
                               )}
                             </div>
                           </div>
@@ -493,12 +491,12 @@ export default function ChatPage() {
               )}
               
               {selectedConv && (
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <div className="text-sm text-gray-600 space-y-1">
-                    <p><strong>Total Casts:</strong> {selectedConv.totalCasts}</p>
-                    <p><strong>Total Spent:</strong> {selectedConv.totalSpent} USDC</p>
-                    <p><strong>Average Score:</strong> {selectedConv.averageScore}</p>
-                    <p><strong>Conversation ID:</strong> {selectedConv.conversationId}</p>
+                <div className="border-t pt-4 space-y-2">
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    <p><span className="font-medium text-card-foreground">Total Casts:</span> {selectedConv.totalCasts}</p>
+                    <p><span className="font-medium text-card-foreground">Total Spent:</span> {selectedConv.totalSpent} USDC</p>
+                    <p><span className="font-medium text-card-foreground">Average Score:</span> {selectedConv.averageScore}</p>
+                    <p><span className="font-medium text-card-foreground">Conversation ID:</span> {selectedConv.conversationId}</p>
                   </div>
                 </div>
               )}

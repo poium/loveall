@@ -6,6 +6,12 @@ import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagm
 import AdminDashboard from './components/AdminDashboard';
 import CONTRACT_ABI_JSON from '../abi.json';
 
+declare global {
+  interface Window {
+    basexpLoaded?: boolean;
+  }
+}
+
 interface PrizePoolData {
   totalPrizePool: string;
   currentWeekPrizePool: string;
@@ -129,6 +135,7 @@ export default function Home() {
   const [allowance, setAllowance] = useState('0');
   const [transactionSuccess, setTransactionSuccess] = useState('');
   const [transactionError, setTransactionError] = useState('');
+  const [isMounted, setIsMounted] = useState(false);
   const { isConnected, address } = useAccount();
   console.log(`💰 Account state: isConnected=${isConnected}, address=${address?.slice(0, 6)}...`);
 
@@ -199,6 +206,45 @@ export default function Home() {
 
     return () => clearInterval(timer);
   }, [prizePoolData]);
+
+  // Set mounted state
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Load BaseXP script once
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !window.basexpLoaded) {
+      // Check if script already exists
+      const existingScript = document.querySelector('script[src="https://basexp.org/widget/basexp-banner.js"]');
+      if (existingScript) {
+        window.basexpLoaded = true;
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://basexp.org/widget/basexp-banner.js';
+      script.setAttribute('data-position', 'top');
+      script.setAttribute('data-theme', 'dark');
+      script.setAttribute('data-speed', '200');
+      script.setAttribute('data-closeable', 'true');
+      script.setAttribute('data-announcement-enabled', 'true');
+      script.setAttribute('data-website-name', 'InfluAI.xyz');
+      script.setAttribute('data-announcement-link', 'https://docs.basexp.org/project-docs/influ-ai/announcements');
+      script.async = true;
+      
+      script.onload = () => {
+        window.basexpLoaded = true;
+      };
+      
+      script.onerror = () => {
+        console.warn('BaseXP banner script failed to load');
+        window.basexpLoaded = true; // Set to true to prevent retries
+      };
+      
+      document.head.appendChild(script);
+    }
+  }, []);
 
   // Handle transaction success
   useEffect(() => {
@@ -538,264 +584,271 @@ export default function Home() {
     return `Next auto-update: ${minutes}m ${seconds}s`;
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900">
-      {/* Header */}
-      <header className="bg-gray-800/80 backdrop-blur-sm border-b border-purple-500/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-lg">❤️</span>
-              </div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
-                Loveall
-              </h1>
-            </div>
-            
-            {/* Navigation */}
-            <nav className="hidden md:flex items-center space-x-6">
-              <a 
-                href="/" 
-                className="text-gray-300 hover:text-white transition-colors duration-200 font-medium"
-              >
-                Dashboard
-              </a>
-              <a 
-                href="/chat" 
-                className="text-gray-300 hover:text-white transition-colors duration-200 font-medium flex items-center space-x-1"
-              >
-                <span>💬</span>
-                <span>Chat History</span>
-              </a>
-            </nav>
-            
-            <ConnectButton />
-          </div>
-        </div>
-      </header>
+   return (
+     <div className="min-h-screen bg-background flex flex-col">
+       {/* Header */}
+       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+         <div className="container mx-auto max-w-6xl flex h-14 items-center">
+           <div className="mr-4 hidden md:flex">
+             <div className="flex items-center space-x-3">
+               <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center">
+                 <span className="text-primary-foreground font-bold">❤️</span>
+               </div>
+               <h1 className="text-xl font-bold text-foreground">
+                 Loveall
+               </h1>
+             </div>
+           </div>
+           
+           {/* Navigation */}
+           <nav className="flex items-center space-x-6 text-sm font-medium">
+             <a 
+               href="/" 
+               className="transition-colors hover:text-foreground/80 text-foreground"
+             >
+               Dashboard
+             </a>
+             <a 
+               href="/chat" 
+               className="transition-colors hover:text-foreground/80 text-muted-foreground flex items-center space-x-1"
+             >
+               <span>💬</span>
+               <span>Chat History</span>
+             </a>
+           </nav>
+           
+           <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
+             <ConnectButton />
+           </div>
+         </div>
+       </header>
 
-      {/* Big Countdown Timer - Hero Section */}
-      <div className="bg-gradient-to-r from-pink-900/50 via-purple-900/50 to-indigo-900/50 backdrop-blur-sm border-b border-purple-500/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center">
-            <h2 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent mb-4">
-              Week {prizePoolData?.currentWeek || 1} Competition
-            </h2>
+       {/* Hero Section */}
+       <section className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+         <div className="container mx-auto max-w-6xl flex h-auto flex-col items-center justify-center gap-4 py-16 text-center lg:py-20">
+           <div className="space-y-4">
+             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl text-foreground">
+               Week {prizePoolData?.currentWeek || 1} Competition
+             </h1>
             
-            {timeRemaining.ended ? (
-              <div className="animate-pulse">
-                <div className="text-3xl md:text-5xl font-bold text-red-400 mb-4">
-                  🏆 WINNER SELECTION TIME! 🏆
-                </div>
-                <div className="text-xl text-gray-300">
-                  Contest ended • Selecting winner by AI scores
-                </div>
-              </div>
-            ) : (
-              <div>
-                <div className="text-lg md:text-xl text-gray-300 mb-6">
-                  Time Remaining Until Winner Selection
-                </div>
+             {timeRemaining.ended ? (
+               <div className="animate-pulse space-y-2">
+                 <div className="text-3xl md:text-4xl font-bold text-destructive">
+                   🏆 WINNER SELECTION TIME! 🏆
+                 </div>
+                 <p className="text-xl text-muted-foreground">
+                   Contest ended • Selecting winner by AI scores
+                 </p>
+               </div>
+             ) : (
+               <div className="space-y-6">
+                 <p className="text-lg text-muted-foreground">
+                   Time Remaining Until Winner Selection
+                 </p>
+                 
+                 <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
+                   {timeRemaining.days > 0 && (
+                     <div className="text-center space-y-2">
+                       <div className="card p-4">
+                         <div className="text-3xl md:text-4xl font-bold text-primary">
+                           {timeRemaining.days}
+                         </div>
+                       </div>
+                       <div className="text-sm text-muted-foreground font-medium">DAYS</div>
+                     </div>
+                   )}
+                   
+                   <div className="text-center space-y-2">
+                     <div className="card p-4">
+                       <div className="text-3xl md:text-4xl font-bold text-primary">
+                         {timeRemaining.hours.toString().padStart(2, '0')}
+                       </div>
+                     </div>
+                     <div className="text-sm text-muted-foreground font-medium">HOURS</div>
+                   </div>
+                   
+                   <div className="text-center space-y-2">
+                     <div className="card p-4">
+                       <div className="text-3xl md:text-4xl font-bold text-primary">
+                         {timeRemaining.minutes.toString().padStart(2, '0')}
+                       </div>
+                     </div>
+                     <div className="text-sm text-muted-foreground font-medium">MINUTES</div>
+                   </div>
+                   
+                   <div className="text-center space-y-2">
+                     <div className="card p-4">
+                       <div className="text-3xl md:text-4xl font-bold text-primary animate-pulse">
+                         {timeRemaining.seconds.toString().padStart(2, '0')}
+                       </div>
+                     </div>
+                     <div className="text-sm text-muted-foreground font-medium">SECONDS</div>
+                   </div>
+                 </div>
                 
-                <div className="flex justify-center items-center space-x-4 md:space-x-8 mb-6">
-                  {timeRemaining.days > 0 && (
-                    <div className="text-center">
-                      <div className="text-4xl md:text-6xl font-bold text-pink-400 bg-gray-800/80 rounded-2xl px-4 py-2 md:px-6 md:py-4 border border-pink-500/30">
-                        {timeRemaining.days}
-                      </div>
-                      <div className="text-sm md:text-base text-gray-400 mt-2">DAYS</div>
-                    </div>
-                  )}
-                  
-                  <div className="text-center">
-                    <div className="text-4xl md:text-6xl font-bold text-purple-400 bg-gray-800/80 rounded-2xl px-4 py-2 md:px-6 md:py-4 border border-purple-500/30">
-                      {timeRemaining.hours.toString().padStart(2, '0')}
-                    </div>
-                    <div className="text-sm md:text-base text-gray-400 mt-2">HOURS</div>
-                  </div>
-                  
-                  <div className="text-center">
-                    <div className="text-4xl md:text-6xl font-bold text-indigo-400 bg-gray-800/80 rounded-2xl px-4 py-2 md:px-6 md:py-4 border border-indigo-500/30">
-                      {timeRemaining.minutes.toString().padStart(2, '0')}
-                    </div>
-                    <div className="text-sm md:text-base text-gray-400 mt-2">MINUTES</div>
-                  </div>
-                  
-                  <div className="text-center">
-                    <div className="text-4xl md:text-6xl font-bold text-cyan-400 bg-gray-800/80 rounded-2xl px-4 py-2 md:px-6 md:py-4 border border-cyan-500/30">
-                      {timeRemaining.seconds.toString().padStart(2, '0')}
-                    </div>
-                    <div className="text-sm md:text-base text-gray-400 mt-2">SECONDS</div>
-                  </div>
-                </div>
-                
-                <div className="flex justify-center items-center space-x-6 text-lg md:text-xl">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-2xl">💰</span>
-                    <span className="text-white font-bold">{formatUSDC(prizePoolData?.currentWeekPrizePool || '0')} USDC</span>
-                    <span className="text-gray-400">Prize Pool</span>
-                  </div>
-                  <div className="text-gray-500">•</div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-2xl">👥</span>
-                    <span className="text-white font-bold">{prizePoolData?.currentWeekParticipantsCount || 0}</span>
-                    <span className="text-gray-400">Participants</span>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            <div className="mt-8 text-center">
-              <div className="inline-flex items-center space-x-2 bg-gray-800/80 rounded-full px-6 py-3 border border-purple-500/30">
-                <span className="text-2xl">🤖</span>
-                <span className="text-white font-medium">AI Character:</span>
-                <span className="text-purple-400 font-bold">{characterData?.name || 'Loading...'}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+                 <div className="flex flex-col items-center justify-center space-y-4 md:flex-row md:space-y-0 md:space-x-8 text-lg">
+                   <div className="flex items-center space-x-2">
+                     <span className="text-2xl">💰</span>
+                     <span className="font-bold text-foreground">{formatUSDC(prizePoolData?.currentWeekPrizePool || '0')} USDC</span>
+                     <span className="text-muted-foreground">Prize Pool</span>
+                   </div>
+                   <div className="text-muted-foreground hidden md:block">•</div>
+                   <div className="flex items-center space-x-2">
+                     <span className="text-2xl">👥</span>
+                     <span className="font-bold text-foreground">{prizePoolData?.currentWeekParticipantsCount || 0}</span>
+                     <span className="text-muted-foreground">Participants</span>
+                   </div>
+                 </div>
+               </div>
+             )}
+             
+             <div className="flex justify-center">
+               <div className="inline-flex items-center space-x-2 rounded-full border bg-card px-6 py-3">
+                 <span className="text-2xl">🤖</span>
+                 <span className="text-card-foreground font-medium">AI Character:</span>
+                 <span className="font-bold text-primary">{characterData?.name || 'Loading...'}</span>
+               </div>
+             </div>
+           </div>
+         </div>
+       </section>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 w-full">
+        <div className="container mx-auto max-w-6xl py-8 space-y-8 px-4">
         
-                       {/* Comprehensive Data Overview - Top Block */}
-               <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 mb-8 border border-purple-500/20">
-                 <div className="flex justify-between items-center mb-6">
-                   <div>
-                     <h2 className="text-2xl font-bold text-white">📊 Complete System Overview</h2>
-                     <p className="text-sm text-gray-400 mt-1">Prize data: 1min • Character: 10min • User data: 1min</p>
+        {/* System Overview */}
+        <div className="card p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="space-y-1">
+              <h2 className="text-2xl font-bold text-card-foreground">📊 System Overview</h2>
+              <p className="text-sm text-muted-foreground">Prize data: 1min • Character: 10min • User data: 1min</p>
             </div>
-                   <button
-                     onClick={handleManualRefresh}
-                     disabled={refreshDisabled}
-                     className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
-                       refreshDisabled
-                         ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                         : 'bg-purple-600 hover:bg-purple-700 text-white hover:scale-105'
-                     }`}
-                   >
-                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                     </svg>
-                     {refreshDisabled ? `Refresh (${refreshCountdown}s)` : 'Refresh'}
-                   </button>
+            <button
+              onClick={handleManualRefresh}
+              disabled={refreshDisabled}
+              className={refreshDisabled ? 'btn-secondary opacity-50 cursor-not-allowed' : 'btn-primary hover-lift'}
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {refreshDisabled ? `Refresh (${refreshCountdown}s)` : 'Refresh'}
+            </button>
           </div>
           
           {loading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-400 mx-auto"></div>
-              <p className="mt-2 text-gray-300">Loading system data...</p>
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="mt-4 text-muted-foreground">Loading system data...</p>
             </div>
           ) : (
             <div className="space-y-8">
               
-              {/* getCommonData() Section */}
-              <div>
-                <h3 className="text-xl font-bold text-white mb-4 flex items-center">
-                  <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm mr-3">getCommonData()</span>
-                  Contract System Data
-                </h3>
+              {/* Contract Data Section */}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <span className="bg-primary text-primary-foreground px-2 py-1 rounded text-sm font-mono">getCommonData()</span>
+                  <h3 className="text-lg font-semibold text-card-foreground">Contract System Data</h3>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   
                   {/* Current Week Prize Pool */}
-                  <div className="bg-gradient-to-r from-purple-900/30 to-indigo-900/30 rounded-xl p-4 border border-purple-500/20">
-                    <div className="text-2xl font-bold text-purple-400 mb-1">
-                  {formatUSDC(prizePoolData?.currentWeekPrizePool || '0')} USDC
-                </div>
-                    <p className="text-gray-300 text-sm font-medium">Current Week Prize Pool</p>
-                    <p className="text-gray-400 text-xs mt-1">
+                  <div className="card p-4 space-y-2">
+                    <div className="text-2xl font-bold text-primary">
+                      {formatUSDC(prizePoolData?.currentWeekPrizePool || '0')} USDC
+                    </div>
+                    <p className="text-card-foreground text-sm font-medium">Current Week Prize Pool</p>
+                    <p className="text-muted-foreground text-xs">
                       Accumulated from this week's participations ({formatUSDC(prizePoolData?.castCost || '0')} USDC per cast)
                     </p>
                   </div>
-
+ 
                   {/* Cast Cost */}
-                  <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 rounded-xl p-4 border border-green-500/20">
-                    <div className="text-2xl font-bold text-green-400 mb-1">
+                  <div className="card p-4 space-y-2">
+                    <div className="text-2xl font-bold text-primary">
                       {formatUSDC(prizePoolData?.castCost || '0')} USDC
                     </div>
-                    <p className="text-gray-300 text-sm font-medium">Cast Cost</p>
-                    <p className="text-gray-400 text-xs mt-1">
+                    <p className="text-card-foreground text-sm font-medium">Cast Cost</p>
+                    <p className="text-muted-foreground text-xs">
                       Price per @loveall mention to participate
                     </p>
                   </div>
-
+ 
                   {/* Current Week */}
-                  <div className="bg-gradient-to-r from-pink-900/30 to-rose-900/30 rounded-xl p-4 border border-pink-500/20">
-                    <div className="text-2xl font-bold text-pink-400 mb-1">
+                  <div className="card p-4 space-y-2">
+                    <div className="text-2xl font-bold text-primary">
                       {prizePoolData?.currentWeek || 1}
                     </div>
-                    <p className="text-gray-300 text-sm font-medium">Current Week</p>
-                    <p className="text-gray-400 text-xs mt-1">
+                    <p className="text-card-foreground text-sm font-medium">Current Week</p>
+                    <p className="text-muted-foreground text-xs">
                       Weekly cycle number (resets every 2 hours for testing)
                     </p>
-              </div>
-              
+                  </div>
+               
                   {/* Total Participants */}
-                  <div className="bg-gradient-to-r from-blue-900/30 to-cyan-900/30 rounded-xl p-4 border border-blue-500/20">
-                    <div className="text-2xl font-bold text-blue-400 mb-1">
-                  {prizePoolData?.currentWeekParticipantsCount || 0}
-                </div>
-                    <p className="text-gray-300 text-sm font-medium">Participants This Week</p>
-                    <p className="text-gray-400 text-xs mt-1">
+                  <div className="card p-4 space-y-2">
+                    <div className="text-2xl font-bold text-primary">
+                      {prizePoolData?.currentWeekParticipantsCount || 0}
+                    </div>
+                    <p className="text-card-foreground text-sm font-medium">Participants This Week</p>
+                    <p className="text-muted-foreground text-xs">
                       Unique users who participated in current week
                     </p>
-              </div>
+                  </div>
               
-              {/* Week End Time */}
-                  <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 rounded-xl p-4 border border-green-500/20">
-                    <div className="text-lg font-bold text-green-400 mb-1">
+                  {/* Week End Time */}
+                  <div className="card p-4 space-y-2">
+                    <div className="text-lg font-bold text-primary">
                       {prizePoolData ? new Date(prizePoolData.weekEndTime).toLocaleDateString() : 'Loading...'}
                     </div>
-                    <p className="text-gray-300 text-sm font-medium">Week End Date</p>
-                    <p className="text-gray-400 text-xs mt-1">
+                    <p className="text-card-foreground text-sm font-medium">Week End Date</p>
+                    <p className="text-muted-foreground text-xs">
                       When the current week ends
                     </p>
                   </div>
-
+ 
                   {/* Week Start Time */}
-                  <div className="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 rounded-xl p-4 border border-yellow-500/20">
-                    <div className="text-sm font-bold text-yellow-400 mb-1">
+                  <div className="card p-4 space-y-2">
+                    <div className="text-sm font-bold text-primary">
                       {prizePoolData?.weekStartTime ? formatTimestamp(prizePoolData.weekStartTime) : 'N/A'}
                     </div>
-                    <p className="text-gray-300 text-sm font-medium">Week Start Time</p>
-                    <p className="text-gray-400 text-xs mt-1">
+                    <p className="text-card-foreground text-sm font-medium">Week Start Time</p>
+                    <p className="text-muted-foreground text-xs">
                       When the current weekly cycle began
                     </p>
                   </div>
-
+ 
                   {/* Rollover Amount */}
-                  <div className="bg-gradient-to-r from-teal-900/30 to-cyan-900/30 rounded-xl p-4 border border-teal-500/20">
-                    <div className="text-2xl font-bold text-teal-400 mb-1">
+                  <div className="card p-4 space-y-2">
+                    <div className="text-2xl font-bold text-primary">
                       {formatUSDC(prizePoolData?.rolloverAmount || '0')} USDC
                     </div>
-                    <p className="text-gray-300 text-sm font-medium">Rollover Amount</p>
-                    <p className="text-gray-400 text-xs mt-1">
+                    <p className="text-card-foreground text-sm font-medium">Rollover Amount</p>
+                    <p className="text-muted-foreground text-xs">
                       10% of previous week's pool (if any)
                     </p>
                   </div>
-
+ 
                   {/* Total Prize Pool Ever */}
-                  <div className="bg-gradient-to-r from-indigo-900/30 to-purple-900/30 rounded-xl p-4 border border-indigo-500/20">
-                    <div className="text-2xl font-bold text-indigo-400 mb-1">
+                  <div className="card p-4 space-y-2">
+                    <div className="text-2xl font-bold text-primary">
                       {formatUSDC(prizePoolData?.totalPrizePool || '0')} USDC
                     </div>
-                    <p className="text-gray-300 text-sm font-medium">Total Prize Pool Ever</p>
-                    <p className="text-gray-400 text-xs mt-1">
+                    <p className="text-card-foreground text-sm font-medium">Total Prize Pool Ever</p>
+                    <p className="text-muted-foreground text-xs">
                       Cumulative total of all prize pools
                     </p>
                   </div>
-
+ 
                   {/* Current Week Winner */}
-                  <div className="bg-gradient-to-r from-red-900/30 to-pink-900/30 rounded-xl p-4 border border-red-500/20">
-                    <div className="text-sm font-bold text-red-400 mb-1">
+                  <div className="card p-4 space-y-2">
+                    <div className="text-sm font-bold text-primary">
                       {prizePoolData?.currentWeekWinner && prizePoolData?.currentWeekWinner !== '0x0000000000000000000000000000000000000000' 
                         ? `${prizePoolData.currentWeekWinner.slice(0, 6)}...${prizePoolData.currentWeekWinner.slice(-4)}`
                         : 'Not Selected'}
                     </div>
-                    <p className="text-gray-300 text-sm font-medium">Current Week Winner</p>
-                    <p className="text-gray-400 text-xs mt-1">
+                    <p className="text-card-foreground text-sm font-medium">Current Week Winner</p>
+                    <p className="text-muted-foreground text-xs">
                       {prizePoolData?.currentWeekPrize && parseFloat(prizePoolData.currentWeekPrize) > 0
                         ? `Prize: ${formatUSDC(prizePoolData.currentWeekPrize)} USDC`
                         : 'Winner selected by admin (if any)'}
@@ -805,63 +858,64 @@ export default function Home() {
               </div>
 
               {/* AI Character Section */}
-              <div>
-                <h3 className="text-xl font-bold text-white mb-4 flex items-center justify-between">
-                  <div className="flex items-center">
-                    <span className="bg-violet-600 text-white px-2 py-1 rounded text-sm mr-3">getCurrentCharacter()</span>
-                    AI Character for Week {prizePoolData?.currentWeek || 1}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className="bg-secondary text-secondary-foreground px-2 py-1 rounded text-sm font-mono">getCurrentCharacter()</span>
+                    <h3 className="text-lg font-semibold text-card-foreground">AI Character for Week {prizePoolData?.currentWeek || 1}</h3>
                   </div>
                   {lastCharacterFetch > 0 && (
-                    <div className="text-xs text-violet-400 bg-violet-900/30 px-2 py-1 rounded">
+                    <div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
                       Updated: {new Date(lastCharacterFetch).toLocaleTimeString()}
                       <br />
                       {getNextCharacterUpdate()}
                     </div>
                   )}
-                </h3>
+                </div>
                 
                 {characterLoading ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-400 mx-auto"></div>
-                    <p className="mt-2 text-gray-300">Loading character data...</p>
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    <p className="mt-4 text-muted-foreground">Loading character data...</p>
                   </div>
                 ) : characterData && characterData.isSet ? (
-                  // Debug: Character data exists and isSet is true
-                  <div className="bg-gradient-to-br from-violet-900/30 via-purple-900/30 to-pink-900/30 rounded-2xl p-6 border border-violet-500/20">
+                  <div className="card p-6 space-y-6">
                     {/* Character Header */}
-                    <div className="text-center mb-6">
-                      <div className="w-20 h-20 bg-gradient-to-br from-violet-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <div className="text-center space-y-4">
+                      <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto">
                         <span className="text-3xl">🤖</span>
                       </div>
-                      <h4 className="text-3xl font-bold text-white mb-2">{characterData.name}</h4>
-                      <div className="bg-violet-900/50 rounded-lg p-4 border border-violet-500/20">
-                        <p className="text-violet-200 text-lg leading-relaxed">{characterData.task}</p>
+                      <div className="space-y-2">
+                        <h4 className="text-3xl font-bold text-card-foreground">{characterData.name}</h4>
+                        <div className="bg-muted rounded-lg p-4 border">
+                          <p className="text-muted-foreground text-lg leading-relaxed">{characterData.task}</p>
+                        </div>
                       </div>
                     </div>
 
                     {/* Character Traits */}
                     {characterData.traitCount > 0 && (
-                      <div>
-                        <h5 className="text-xl font-semibold text-white mb-4 text-center">Character Traits</h5>
+                      <div className="space-y-4">
+                        <h5 className="text-xl font-semibold text-card-foreground text-center">Character Traits</h5>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                           {characterData.traitNames.map((traitName, index) => (
-                            <div key={index} className="bg-gradient-to-r from-purple-900/50 to-pink-900/50 rounded-xl p-4 border border-purple-500/30">
+                            <div key={index} className="bg-secondary rounded-lg p-4 border space-y-2">
                               <div className="flex justify-between items-center">
-                                <span className="text-purple-200 font-medium">{traitName}</span>
+                                <span className="text-secondary-foreground font-medium">{traitName}</span>
                                 <div className="flex items-center gap-2">
-                                  <span className="text-white font-bold text-lg">{characterData.traitValues[index]}</span>
-                                  <span className="text-purple-300 text-sm">/10</span>
+                                  <span className="text-primary font-bold text-lg">{characterData.traitValues[index]}</span>
+                                  <span className="text-muted-foreground text-sm">/10</span>
                                 </div>
                               </div>
                               {/* Trait bar */}
-                              <div className="mt-2 w-full bg-purple-900/50 rounded-full h-2">
+                              <div className="w-full bg-muted rounded-full h-2">
                                 <div 
-                                  className="bg-gradient-to-r from-purple-400 to-pink-400 h-2 rounded-full transition-all duration-300"
+                                  className="bg-primary h-2 rounded-full transition-all duration-300"
                                   style={{ width: `${(characterData.traitValues[index] / 10) * 100}%` }}
                                 ></div>
                               </div>
                               {/* Trait description */}
-                              <div className="mt-2 text-xs text-purple-300">
+                              <div className="text-xs text-muted-foreground">
                                 {characterData.traitValues[index] >= 8 ? 'Excellent' :
                                  characterData.traitValues[index] >= 6 ? 'Good' :
                                  characterData.traitValues[index] >= 4 ? 'Average' : 'Needs Work'}
@@ -1495,7 +1549,7 @@ export default function Home() {
           </div>
           
         {/* Admin Dashboard - Only show for contract owner */}
-        {isConnected && address && (
+        {isConnected && address && isMounted && (
           <div className="mt-8">
             <AdminDashboard />
           </div>
@@ -1526,14 +1580,74 @@ export default function Home() {
             </div>
           </div>
         )}
+        </div>
       </main>
 
       {/* Footer */}
-      <footer className="bg-gray-800/50 py-6 mt-12 border-t border-purple-500/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-gray-400 text-sm">
-            Built on Base Network • Powered by Farcaster
-          </p>
+      <footer className="bg-card py-6 mt-12 border-t border-border">
+        <div className="container mx-auto max-w-6xl px-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-gray-400 text-sm">
+              Built on Base Network • Powered by Farcaster
+            </p>
+            
+            {/* BaseXP Footer Widget */}
+            <div 
+              className="basexp-footer-widget" 
+              style={{
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '6px', 
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', 
+                fontSize: '13px', 
+                lineHeight: '1.5'
+              }}
+            >
+              <a 
+                href="https://basexp.org" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                style={{
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '6px', 
+                  color: '#9ca3af', 
+                  textDecoration: 'none', 
+                  transition: 'color 0.3s ease'
+                }}
+                onMouseOver={(e) => {
+                  const logo = e.currentTarget.querySelector('.basexp-logo') as HTMLImageElement;
+                  if (logo) {
+                    logo.style.filter = 'brightness(0) saturate(100%) invert(27%) sepia(96%) saturate(1456%) hue-rotate(213deg) brightness(97%) contrast(101%)';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  const logo = e.currentTarget.querySelector('.basexp-logo') as HTMLImageElement;
+                  if (logo) {
+                    logo.style.filter = 'brightness(0) invert(1)';
+                  }
+                }}
+              >
+                <span style={{fontSize: '13px', transition: 'color 0.3s ease'}}>
+                  Powered by
+                </span>
+                <img 
+                  src="https://basexp.org/logo.svg" 
+                  alt="BaseXP" 
+                  className="basexp-logo" 
+                  style={{
+                    height: '16px', 
+                    width: 'auto', 
+                    display: 'inline-block', 
+                    verticalAlign: 'middle', 
+                    filter: 'brightness(0) invert(1)', 
+                    transition: 'filter 0.5s ease', 
+                    cursor: 'pointer'
+                  }}
+                />
+              </a>
+            </div>
+          </div>
         </div>
       </footer>
     </div>

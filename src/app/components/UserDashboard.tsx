@@ -264,64 +264,64 @@ export default function UserDashboard() {
   }
 
   return (
-    <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-purple-500/20">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-bold text-white">Your Dashboard</h3>
-        <div className="text-sm text-gray-400">
+    <div className="card p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xl font-bold text-card-foreground">Your Dashboard</h3>
+        <div className="text-sm text-muted-foreground">
           {address?.slice(0, 6)}...{address?.slice(-4)}
         </div>
       </div>
 
       {loading ? (
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-400 mx-auto"></div>
-          <p className="mt-2 text-gray-300">Loading your data...</p>
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading your data...</p>
         </div>
       ) : userData ? (
         <div className="space-y-6">
           {/* Balance Overview */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 rounded-xl p-4 border border-green-500/20">
-              <div className="text-2xl font-bold text-green-400 mb-1">
+            <div className="card p-4 space-y-2">
+              <div className="text-2xl font-bold text-primary">
                 {parseFloat(userData.balance || '0').toFixed(2)} USDC
               </div>
-              <p className="text-gray-300 text-sm">Contract Balance</p>
+              <p className="text-muted-foreground text-sm">Contract Balance</p>
             </div>
             
-            <div className="bg-gradient-to-r from-blue-900/30 to-cyan-900/30 rounded-xl p-4 border border-blue-500/20">
-              <div className="text-2xl font-bold text-blue-400 mb-1">
+            <div className="card p-4 space-y-2">
+              <div className="text-2xl font-bold text-primary">
                 {userData.participationCount}
               </div>
-              <p className="text-gray-300 text-sm">Total Casts</p>
+              <p className="text-muted-foreground text-sm">Total Casts</p>
             </div>
             
-            <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 rounded-xl p-4 border border-purple-500/20">
-              <div className="text-2xl font-bold text-purple-400 mb-1">
+            <div className="card p-4 space-y-2">
+              <div className="text-2xl font-bold text-primary">
                 {parseFloat(userData.totalSpent || '0').toFixed(2)} USDC
               </div>
-              <p className="text-gray-300 text-sm">Total Spent</p>
+              <p className="text-muted-foreground text-sm">Total Spent</p>
             </div>
           </div>
 
           {/* Participation Status */}
-          <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600/20">
+          <div className="card p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-semibold text-white mb-1">Participation Status</h4>
-                <p className="text-sm text-gray-300">
+              <div className="space-y-1">
+                <h4 className="font-semibold text-card-foreground">Participation Status</h4>
+                <p className="text-sm text-muted-foreground">
                   {userData.canParticipate ? 'Ready to participate' : 'Cannot participate'}
                 </p>
               </div>
-              <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+              <div className={`px-3 py-1 rounded-full text-sm font-medium border ${
                 userData.canParticipate 
-                  ? 'bg-green-900/50 text-green-400 border border-green-500/30' 
-                  : 'bg-red-900/50 text-red-400 border border-red-500/30'
+                  ? 'bg-primary/10 text-primary border-primary/20' 
+                  : 'bg-destructive/10 text-destructive border-destructive/20'
               }`}>
                 {userData.canParticipate ? 'Active' : 'Inactive'}
               </div>
             </div>
             {!userData.canParticipate && (
-              <p className="text-xs text-yellow-400 mt-2">
+              <p className="text-xs text-muted-foreground">
                 {!userData.hasSufficientBalance ? 'Insufficient balance' : 
                  userData.hasParticipatedThisWeek ? 'Already participated this week' : 
                  'Unknown issue'}
@@ -330,24 +330,24 @@ export default function UserDashboard() {
           </div>
 
           {/* Balance Management */}
-          <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600/20">
-            <h4 className="font-semibold text-white mb-4">Balance Management</h4>
+          <div className="card p-4 space-y-4">
+            <h4 className="font-semibold text-card-foreground">Balance Management</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Top Up */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Top Up Balance</label>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-card-foreground">Top Up Balance</label>
                 <div className="flex space-x-2">
                   <input
                     type="number"
                     placeholder="0.01"
                     value={topUpAmount}
                     onChange={(e) => setTopUpAmount(e.target.value)}
-                    className="flex-1 px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="input flex-1"
                   />
                   <button
                     onClick={topUpBalance}
                     disabled={isPending || !topUpAmount}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={isPending || !topUpAmount ? 'btn-secondary opacity-50 cursor-not-allowed' : 'btn-primary'}
                   >
                     Top Up
                   </button>
@@ -355,20 +355,20 @@ export default function UserDashboard() {
               </div>
 
               {/* Withdraw */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Withdraw Balance</label>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-card-foreground">Withdraw Balance</label>
                 <div className="flex space-x-2">
                   <input
                     type="number"
                     placeholder="0.01"
                     value={withdrawAmount}
                     onChange={(e) => setWithdrawAmount(e.target.value)}
-                    className="flex-1 px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="input flex-1"
                   />
                   <button
                     onClick={withdrawBalance}
                     disabled={isPending || !withdrawAmount}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={isPending || !withdrawAmount ? 'btn-secondary opacity-50 cursor-not-allowed' : 'btn-primary'}
                   >
                     Withdraw
                   </button>
@@ -379,18 +379,18 @@ export default function UserDashboard() {
 
           {/* Participation History */}
           {userData.participations && userData.participations.length > 0 && (
-            <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600/20">
-              <h4 className="font-semibold text-white mb-4">Recent Activity</h4>
+            <div className="card p-4 space-y-4">
+              <h4 className="font-semibold text-card-foreground">Recent Activity</h4>
               <div className="space-y-2 max-h-40 overflow-y-auto">
                 {userData.participations.slice(0, 5).map((participation, index) => (
-                  <div key={index} className="flex justify-between items-center py-2 px-3 bg-gray-600/30 rounded-lg">
-                    <div>
-                      <p className="text-sm text-white">Cast #{participation.castHash.slice(0, 8)}...</p>
-                      <p className="text-xs text-gray-400">
+                  <div key={index} className="flex justify-between items-center py-2 px-3 bg-muted rounded-lg">
+                    <div className="space-y-1">
+                      <p className="text-sm text-card-foreground">Cast #{participation.castHash.slice(0, 8)}...</p>
+                      <p className="text-xs text-muted-foreground">
                         {new Date(participation.timestamp * 1000).toLocaleDateString()}
                       </p>
                     </div>
-                    <div className="text-sm text-green-400">
+                    <div className="text-sm text-primary font-medium">
                       -{participation.usdcAmount} USDC
                     </div>
                   </div>
@@ -400,17 +400,17 @@ export default function UserDashboard() {
           )}
         </div>
       ) : (
-        <div className="text-center py-8">
-          <p className="text-gray-300">Failed to load user data</p>
+        <div className="flex flex-col items-center justify-center py-12">
+          <p className="text-muted-foreground">Failed to load user data</p>
         </div>
       )}
 
       {/* Transaction Status */}
       {(isPending || isConfirming) && (
-        <div className="mt-4 p-3 bg-blue-900/50 border border-blue-500/30 rounded-lg">
+        <div className="card p-3 bg-accent/50">
           <div className="flex items-center space-x-3">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
-            <p className="text-blue-300 text-sm">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+            <p className="text-card-foreground text-sm">
               {isPending ? 'Transaction pending...' : 'Confirming transaction...'}
             </p>
           </div>
@@ -418,23 +418,23 @@ export default function UserDashboard() {
       )}
 
       {isSuccess && (
-        <div className="mt-4 p-3 bg-green-900/50 border border-green-500/30 rounded-lg">
+        <div className="card p-3 bg-primary/10 border-primary/20">
           <div className="flex items-center space-x-3">
-            <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-              <span className="text-white text-xs">✓</span>
+            <div className="w-4 h-4 bg-primary rounded-full flex items-center justify-center">
+              <span className="text-primary-foreground text-xs">✓</span>
             </div>
-            <p className="text-green-300 text-sm">Transaction successful!</p>
+            <p className="text-primary text-sm">Transaction successful!</p>
           </div>
         </div>
       )}
 
       {error && (
-        <div className="mt-4 p-3 bg-red-900/50 border border-red-500/30 rounded-lg">
+        <div className="card p-3 bg-destructive/10 border-destructive/20">
           <div className="flex items-center space-x-3">
-            <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-              <span className="text-white text-xs">✗</span>
+            <div className="w-4 h-4 bg-destructive rounded-full flex items-center justify-center">
+              <span className="text-destructive-foreground text-xs">✗</span>
             </div>
-            <p className="text-red-300 text-sm">Transaction failed: {error.message}</p>
+            <p className="text-destructive text-sm">Transaction failed: {error.message}</p>
           </div>
         </div>
       )}

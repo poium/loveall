@@ -97,6 +97,7 @@ export default function AdminDashboard() {
   
   const { isConnected, address } = useAccount();
 
+
   // Wagmi hooks for contract interactions
   const { writeContract: writeContractWinner, isPending: isWinnerPending, data: winnerHash } = useWriteContract();
   const { writeContract: writeContractDistribute, isPending: isDistributePending, data: distributeHash } = useWriteContract();
@@ -240,26 +241,27 @@ export default function AdminDashboard() {
     }
   };
 
+
   if (!isConnected) {
     return (
-      <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-purple-500/20">
-        <h3 className="text-xl font-bold text-white mb-4">Admin Dashboard</h3>
-        <p className="text-gray-300">Please connect your wallet to access admin functions.</p>
+      <div className="card p-6 space-y-4">
+        <h3 className="text-xl font-bold text-card-foreground">Admin Dashboard</h3>
+        <p className="text-muted-foreground">Please connect your wallet to access admin functions.</p>
       </div>
     );
   }
 
   if (!adminData?.isOwner) {
     return (
-      <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-purple-500/20">
-        <h3 className="text-xl font-bold text-white mb-4">Admin Dashboard</h3>
-        <p className="text-gray-300">Only the contract owner can access admin functions.</p>
+      <div className="card p-6 space-y-4">
+        <h3 className="text-xl font-bold text-card-foreground">Admin Dashboard</h3>
+        <p className="text-muted-foreground">Only the contract owner can access admin functions.</p>
         {adminData && (
-          <div className="mt-4 p-4 bg-gray-700 rounded-lg">
-            <p className="text-sm text-gray-400">Connected: {address?.slice(0, 6)}...{address?.slice(-4)}</p>
-            <p className="text-sm text-gray-400">Is Owner: {adminData.isOwner ? 'Yes' : 'No'}</p>
-            <p className="text-sm text-gray-400">Current Prize Pool: {adminData.currentPrizePool} USDC</p>
-            <p className="text-sm text-gray-400">Total Participants: {adminData.totalParticipants}</p>
+          <div className="bg-muted p-4 rounded-lg space-y-1">
+            <p className="text-sm text-muted-foreground">Connected: {address?.slice(0, 6)}...{address?.slice(-4)}</p>
+            <p className="text-sm text-muted-foreground">Is Owner: {adminData.isOwner ? 'Yes' : 'No'}</p>
+            <p className="text-sm text-muted-foreground">Current Prize Pool: {adminData.currentPrizePool} USDC</p>
+            <p className="text-sm text-muted-foreground">Total Participants: {adminData.totalParticipants}</p>
           </div>
         )}
       </div>
@@ -267,104 +269,100 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-purple-500/20">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-xl font-bold text-white">Admin Dashboard</h3>
+    <div className="card p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-xl font-bold text-card-foreground">Admin Dashboard</h3>
         <button
           onClick={fetchAdminData}
-          className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm transition-colors"
+          className="btn-secondary"
         >
           Refresh
         </button>
       </div>
 
       {loading ? (
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400 mx-auto"></div>
-          <p className="mt-2 text-gray-300">Loading admin data...</p>
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p className="mt-4 text-muted-foreground">Loading admin data...</p>
         </div>
       ) : (
         <div className="space-y-6">
           {/* Overview */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600/20">
-              <div className="text-2xl font-bold text-purple-400 mb-1">
+            <div className="card p-4 space-y-2">
+              <div className="text-2xl font-bold text-primary">
                 {adminData?.currentPrizePool} USDC
               </div>
-              <p className="text-gray-300 text-sm">Current Prize Pool</p>
+              <p className="text-muted-foreground text-sm">Current Prize Pool</p>
             </div>
-            <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600/20">
-              <div className="text-2xl font-bold text-blue-400 mb-1">
+            <div className="card p-4 space-y-2">
+              <div className="text-2xl font-bold text-primary">
                 {adminData?.totalParticipants}
               </div>
-              <p className="text-gray-300 text-sm">Total Participants</p>
+              <p className="text-muted-foreground text-sm">Total Participants</p>
             </div>
-            <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600/20">
-              <div className="text-2xl font-bold text-green-400 mb-1">
+            <div className="card p-4 space-y-2">
+              <div className="text-2xl font-bold text-primary">
                 Week {adminData?.currentWeek}
               </div>
-              <p className="text-gray-300 text-sm">Current Week</p>
+              <p className="text-muted-foreground text-sm">Current Week</p>
             </div>
-            <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600/20">
-              <div className="text-2xl font-bold text-yellow-400 mb-1">
+            <div className="card p-4 space-y-2">
+              <div className="text-2xl font-bold text-primary">
                 {adminData?.rolloverAmount} USDC
               </div>
-              <p className="text-gray-300 text-sm">Rollover Amount</p>
+              <p className="text-muted-foreground text-sm">Rollover Amount</p>
             </div>
           </div>
 
           {/* AI Evaluation Section */}
-          <div className="bg-gray-700/50 rounded-xl p-6 border border-gray-600/20">
-            <h4 className="text-lg font-semibold text-white mb-4">🤖 AI-Powered Winner Selection</h4>
+          <div className="card p-6 space-y-4">
+            <h4 className="text-lg font-semibold text-card-foreground">🤖 AI-Powered Winner Selection</h4>
             
             <div className="space-y-4">
               <button
                 onClick={evaluateCastsWithAI}
                 disabled={evaluating || adminData?.totalParticipants === 0}
-                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                  evaluating || adminData?.totalParticipants === 0
-                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white hover:scale-105'
-                }`}
+                className={evaluating || adminData?.totalParticipants === 0 ? 'btn-secondary opacity-50 cursor-not-allowed' : 'btn-primary hover-lift'}
               >
                 {evaluating ? 'Evaluating Casts...' : 'Evaluate Casts with AI'}
               </button>
 
               {evaluations.length > 0 && (
                 <div className="space-y-4">
-                  <h5 className="text-white font-semibold">AI Evaluation Results:</h5>
+                  <h5 className="text-card-foreground font-semibold">AI Evaluation Results:</h5>
                   
                   {evaluations.map((evaluation, index) => (
-                    <div key={index} className="bg-gray-800/50 rounded-lg p-4 border border-gray-600/20">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <p className="text-white font-medium">
+                    <div key={index} className="bg-secondary rounded-lg p-4 border space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-1">
+                          <p className="text-secondary-foreground font-medium">
                             {index + 1}. {evaluation.userAddress.slice(0, 6)}...{evaluation.userAddress.slice(-4)}
                           </p>
-                          <p className="text-gray-400 text-sm">
+                          <p className="text-muted-foreground text-sm">
                             Score: {evaluation.evaluation.score}/50
                           </p>
                         </div>
                         {index === 0 && (
-                          <span className="px-3 py-1 rounded text-sm bg-yellow-600 text-white">
+                          <span className="px-3 py-1 rounded text-sm bg-primary text-primary-foreground">
                             Highest Score - Auto Winner
                           </span>
                         )}
                       </div>
                       
-                                             <p className="text-gray-300 text-sm mb-2">
-                         {evaluation.evaluation.evaluation}
-                       </p>
+                      <p className="text-muted-foreground text-sm">
+                        {evaluation.evaluation.evaluation}
+                      </p>
                       
-                                             {evaluation.evaluation.scores && (
-                         <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
-                           <div className="text-gray-400">Quality: {evaluation.evaluation.scores.contentQuality}/10</div>
-                           <div className="text-gray-400">Creativity: {evaluation.evaluation.scores.creativity}/10</div>
-                           <div className="text-gray-400">Relevance: {evaluation.evaluation.scores.relevance}/10</div>
-                           <div className="text-gray-400">Engagement: {evaluation.evaluation.scores.engagementPotential}/10</div>
-                           <div className="text-gray-400">Impact: {evaluation.evaluation.scores.overallImpact}/10</div>
-                         </div>
-                       )}
+                      {evaluation.evaluation.scores && (
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs text-muted-foreground">
+                          <div>Quality: {evaluation.evaluation.scores.contentQuality}/10</div>
+                          <div>Creativity: {evaluation.evaluation.scores.creativity}/10</div>
+                          <div>Relevance: {evaluation.evaluation.scores.relevance}/10</div>
+                          <div>Engagement: {evaluation.evaluation.scores.engagementPotential}/10</div>
+                          <div>Impact: {evaluation.evaluation.scores.overallImpact}/10</div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -374,11 +372,7 @@ export default function AdminDashboard() {
                 <button
                   onClick={selectWinnerByAIScore}
                   disabled={winnerLoading || isWinnerPending || isWinnerConfirming}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                    winnerLoading || isWinnerPending || isWinnerConfirming
-                      ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                      : 'bg-green-600 hover:bg-green-700 text-white hover:scale-105'
-                  }`}
+                  className={winnerLoading || isWinnerPending || isWinnerConfirming ? 'btn-secondary opacity-50 cursor-not-allowed' : 'btn-primary hover-lift'}
                 >
                   {winnerLoading || isWinnerPending || isWinnerConfirming ? 'Selecting Winner...' : 'Select Winner by AI Score'}
                 </button>
@@ -387,18 +381,14 @@ export default function AdminDashboard() {
           </div>
 
           {/* Admin Actions */}
-          <div className="bg-gray-700/50 rounded-xl p-6 border border-gray-600/20">
-            <h4 className="text-lg font-semibold text-white mb-4">⚡ Admin Actions</h4>
+          <div className="card p-6 space-y-4">
+            <h4 className="text-lg font-semibold text-card-foreground">⚡ Admin Actions</h4>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <button
                 onClick={distributePrize}
                 disabled={distributeLoading || isDistributePending || isDistributeConfirming}
-                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                  distributeLoading || isDistributePending || isDistributeConfirming
-                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                    : 'bg-green-600 hover:bg-green-700 text-white hover:scale-105'
-                }`}
+                className={distributeLoading || isDistributePending || isDistributeConfirming ? 'btn-secondary opacity-50 cursor-not-allowed' : 'btn-primary hover-lift'}
               >
                 {distributeLoading || isDistributePending || isDistributeConfirming 
                   ? 'Distributing...' 
@@ -409,11 +399,7 @@ export default function AdminDashboard() {
               <button
                 onClick={startNewWeek}
                 disabled={newWeekLoading || isNewWeekPending || isNewWeekConfirming}
-                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                  newWeekLoading || isNewWeekPending || isNewWeekConfirming
-                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white hover:scale-105'
-                }`}
+                className={newWeekLoading || isNewWeekPending || isNewWeekConfirming ? 'btn-secondary opacity-50 cursor-not-allowed' : 'btn-primary hover-lift'}
               >
                 {newWeekLoading || isNewWeekPending || isNewWeekConfirming 
                   ? 'Starting...' 
@@ -423,7 +409,7 @@ export default function AdminDashboard() {
 
               <button
                 onClick={fetchAdminData}
-                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-all duration-200 hover:scale-105"
+                className="btn-secondary hover-lift"
               >
                 Refresh Data
               </button>
@@ -432,10 +418,10 @@ export default function AdminDashboard() {
 
           {/* Transaction Status */}
           {(isWinnerPending || isDistributePending || isNewWeekPending || isWinnerConfirming || isDistributeConfirming || isNewWeekConfirming) && (
-            <div className="p-4 bg-blue-900/50 border border-blue-500/20 rounded-xl">
+            <div className="card p-4 bg-accent/50">
               <div className="flex items-center gap-3">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400"></div>
-                <span className="text-blue-300 font-medium">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                <span className="text-card-foreground font-medium">
                   {isWinnerPending && 'Confirming winner selection...'}
                   {isDistributePending && 'Confirming prize distribution...'}
                   {isNewWeekPending && 'Confirming new week start...'}
