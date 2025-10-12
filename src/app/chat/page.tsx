@@ -212,18 +212,20 @@ export default function ChatPage() {
     return (
       <div className="min-h-screen bg-background">
         <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="container flex h-14 items-center">
-            <div className="mr-4 hidden md:flex">
-              <div className="flex items-center space-x-3">
-                <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center">
-                  <span className="text-primary-foreground font-bold">❤️</span>
-                </div>
-                <h1 className="text-xl font-bold text-foreground">
-                  Loveall
-                </h1>
+          <div className="container mx-auto max-w-6xl flex h-14 items-center justify-between">
+            {/* Logo */}
+            <div className="hidden md:flex">
+              <div className="h-8 w-auto flex items-center justify-center">
+                <img 
+                  src="/logo.svg" 
+                  alt="Loveall" 
+                  className="h-8 w-auto"
+                  style={{ filter: 'brightness(0) invert(1)' }}
+                />
               </div>
             </div>
             
+            {/* Centered Navigation */}
             <nav className="flex items-center space-x-6 text-sm font-medium">
               <a 
                 href="/" 
@@ -239,6 +241,9 @@ export default function ChatPage() {
                 <span>Chat History</span>
               </a>
             </nav>
+            
+            {/* Spacer for balance */}
+            <div className="hidden md:flex w-8"></div>
           </div>
         </header>
 
@@ -256,18 +261,20 @@ export default function ChatPage() {
     return (
       <div className="min-h-screen bg-background">
         <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="container flex h-14 items-center">
-            <div className="mr-4 hidden md:flex">
-              <div className="flex items-center space-x-3">
-                <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center">
-                  <span className="text-primary-foreground font-bold">❤️</span>
-                </div>
-                <h1 className="text-xl font-bold text-foreground">
-                  Loveall
-                </h1>
+          <div className="container mx-auto max-w-6xl flex h-14 items-center justify-between">
+            {/* Logo */}
+            <div className="hidden md:flex">
+              <div className="h-8 w-auto flex items-center justify-center">
+                <img 
+                  src="/logo.svg" 
+                  alt="Loveall" 
+                  className="h-8 w-auto"
+                  style={{ filter: 'brightness(0) invert(1)' }}
+                />
               </div>
             </div>
             
+            {/* Centered Navigation */}
             <nav className="flex items-center space-x-6 text-sm font-medium">
               <a 
                 href="/" 
@@ -283,6 +290,9 @@ export default function ChatPage() {
                 <span>Chat History</span>
               </a>
             </nav>
+            
+            {/* Spacer for balance */}
+            <div className="hidden md:flex w-8"></div>
           </div>
         </header>
 
@@ -306,18 +316,20 @@ export default function ChatPage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-14 items-center">
-          <div className="mr-4 hidden md:flex">
-            <div className="flex items-center space-x-3">
-              <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center">
-                <span className="text-primary-foreground font-bold">❤️</span>
-              </div>
-              <h1 className="text-xl font-bold text-foreground">
-                Loveall
-              </h1>
+        <div className="container mx-auto max-w-6xl flex h-14 items-center justify-between">
+          {/* Logo */}
+          <div className="hidden md:flex">
+            <div className="h-8 w-auto flex items-center justify-center">
+              <img 
+                src="/logo.svg" 
+                alt="Loveall" 
+                className="h-8 w-auto"
+                style={{ filter: 'brightness(0) invert(1)' }}
+              />
             </div>
           </div>
           
+          {/* Centered Navigation */}
           <nav className="flex items-center space-x-6 text-sm font-medium">
             <a 
               href="/" 
@@ -333,6 +345,9 @@ export default function ChatPage() {
               <span>Chat History</span>
             </a>
           </nav>
+          
+          {/* Spacer for balance */}
+          <div className="hidden md:flex w-8"></div>
         </div>
       </header>
 

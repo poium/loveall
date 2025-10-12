@@ -588,19 +588,20 @@ export default function Home() {
      <div className="min-h-screen bg-background flex flex-col">
        {/* Header */}
        <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-         <div className="container mx-auto max-w-6xl flex h-14 items-center">
-           <div className="mr-4 hidden md:flex">
-             <div className="flex items-center space-x-3">
-               <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center">
-                 <span className="text-primary-foreground font-bold">❤️</span>
-               </div>
-               <h1 className="text-xl font-bold text-foreground">
-                 Loveall
-               </h1>
+         <div className="container mx-auto max-w-6xl flex h-14 items-center justify-between">
+           {/* Logo */}
+           <div className="hidden md:flex">
+             <div className="h-8 w-auto flex items-center justify-center">
+               <img 
+                 src="/logo.svg" 
+                 alt="Loveall" 
+                 className="h-8 w-auto"
+                 style={{ filter: 'brightness(0) invert(1)' }}
+               />
              </div>
            </div>
            
-           {/* Navigation */}
+           {/* Centered Navigation */}
            <nav className="flex items-center space-x-6 text-sm font-medium">
              <a 
                href="/" 
@@ -617,7 +618,8 @@ export default function Home() {
              </a>
            </nav>
            
-           <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
+           {/* Connect Button */}
+           <div className="flex items-center">
              <ConnectButton />
            </div>
          </div>
@@ -626,87 +628,22 @@ export default function Home() {
        {/* Hero Section */}
        <section className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
          <div className="container mx-auto max-w-6xl flex h-auto flex-col items-center justify-center gap-4 py-16 text-center lg:py-20">
-           <div className="space-y-4">
-             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl text-foreground">
-               Week {prizePoolData?.currentWeek || 1} Competition
-             </h1>
-            
-             {timeRemaining.ended ? (
-               <div className="animate-pulse space-y-2">
-                 <div className="text-3xl md:text-4xl font-bold text-destructive">
-                   🏆 WINNER SELECTION TIME! 🏆
-                 </div>
-                 <p className="text-xl text-muted-foreground">
-                   Contest ended • Selecting winner by AI scores
-                 </p>
-               </div>
-             ) : (
-               <div className="space-y-6">
-                 <p className="text-lg text-muted-foreground">
-                   Time Remaining Until Winner Selection
-                 </p>
+           <div className="space-y-6">
+             <div className="flex flex-col items-center space-y-6">
+               <img 
+                 src="/jordan.gif" 
+                 alt="Jordan Belfort" 
+                 className="w-32 h-32 md:w-40 md:h-40 object-cover"
+               />
+               
+               <div className="space-y-4">
+                 <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl text-foreground">
+                   Text rich AI people. Get richer.
+                 </h1>
                  
-                 <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
-                   {timeRemaining.days > 0 && (
-                     <div className="text-center space-y-2">
-                       <div className="card p-4">
-                         <div className="text-3xl md:text-4xl font-bold text-primary">
-                           {timeRemaining.days}
-                         </div>
-                       </div>
-                       <div className="text-sm text-muted-foreground font-medium">DAYS</div>
-                     </div>
-                   )}
-                   
-                   <div className="text-center space-y-2">
-                     <div className="card p-4">
-                       <div className="text-3xl md:text-4xl font-bold text-primary">
-                         {timeRemaining.hours.toString().padStart(2, '0')}
-                       </div>
-                     </div>
-                     <div className="text-sm text-muted-foreground font-medium">HOURS</div>
-                   </div>
-                   
-                   <div className="text-center space-y-2">
-                     <div className="card p-4">
-                       <div className="text-3xl md:text-4xl font-bold text-primary">
-                         {timeRemaining.minutes.toString().padStart(2, '0')}
-                       </div>
-                     </div>
-                     <div className="text-sm text-muted-foreground font-medium">MINUTES</div>
-                   </div>
-                   
-                   <div className="text-center space-y-2">
-                     <div className="card p-4">
-                       <div className="text-3xl md:text-4xl font-bold text-primary animate-pulse">
-                         {timeRemaining.seconds.toString().padStart(2, '0')}
-                       </div>
-                     </div>
-                     <div className="text-sm text-muted-foreground font-medium">SECONDS</div>
-                   </div>
-                 </div>
-                
-                 <div className="flex flex-col items-center justify-center space-y-4 md:flex-row md:space-y-0 md:space-x-8 text-lg">
-                   <div className="flex items-center space-x-2">
-                     <span className="text-2xl">💰</span>
-                     <span className="font-bold text-foreground">{formatUSDC(prizePoolData?.currentWeekPrizePool || '0')} USDC</span>
-                     <span className="text-muted-foreground">Prize Pool</span>
-                   </div>
-                   <div className="text-muted-foreground hidden md:block">•</div>
-                   <div className="flex items-center space-x-2">
-                     <span className="text-2xl">👥</span>
-                     <span className="font-bold text-foreground">{prizePoolData?.currentWeekParticipantsCount || 0}</span>
-                     <span className="text-muted-foreground">Participants</span>
-                   </div>
-                 </div>
-               </div>
-             )}
-             
-             <div className="flex justify-center">
-               <div className="inline-flex items-center space-x-2 rounded-full border bg-card px-6 py-3">
-                 <span className="text-2xl">🤖</span>
-                 <span className="text-card-foreground font-medium">AI Character:</span>
-                 <span className="font-bold text-primary">{characterData?.name || 'Loading...'}</span>
+                 <p className="text-xl md:text-2xl text-muted-foreground max-w-4xl mx-auto">
+                   Every message costs $1. Every reply might change your net worth.
+                 </p>
                </div>
              </div>
            </div>
@@ -952,7 +889,7 @@ export default function Home() {
 
                     {/* How to Interact */}
                     <div className="mt-6 bg-gradient-to-r from-blue-900/30 to-indigo-900/30 rounded-xl p-4 border border-blue-500/20">
-                      <h5 className="text-lg font-semibold text-white mb-3 flex items-center">
+                      <h5 className="text-lg font-semibold text-foreground mb-3 flex items-center">
                         <span className="mr-2">💬</span>
                         How to Interact
                       </h5>
@@ -965,17 +902,17 @@ export default function Home() {
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-600/20 text-center">
-                    <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="card p-6 text-center">
+                    <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto mb-4">
                       <span className="text-2xl">❓</span>
                     </div>
-                    <h4 className="text-xl font-semibold text-white mb-2">No Character Set</h4>
-                    <p className="text-gray-400 mb-4">
+                    <h4 className="text-xl font-semibold text-card-foreground mb-2">No Character Set</h4>
+                    <p className="text-muted-foreground mb-4">
                       The admin hasn't set an AI character for this week yet. Check back later!
                     </p>
                     {/* Debug info */}
                     {characterData && (
-                      <div className="bg-gray-900/50 rounded p-3 text-xs text-gray-400 text-left">
+                      <div className="bg-card/50 rounded p-3 text-xs text-muted-foreground text-left">
                         <p><strong>Debug:</strong></p>
                         <p>Name: {characterData.name || 'empty'}</p>
                         <p>Task: {characterData.task || 'empty'}</p>
@@ -990,15 +927,15 @@ export default function Home() {
               {/* getUserData() Section - Only show when connected */}
               {isConnected && address && (
                 <div>
-                  <h3 className="text-xl font-bold text-white mb-4 flex items-center">
-                    <span className="bg-green-600 text-white px-2 py-1 rounded text-sm mr-3">getUserData()</span>
+                  <h3 className="text-xl font-bold text-foreground mb-4 flex items-center">
+                    <span className="bg-green-600 text-foreground px-2 py-1 rounded text-sm mr-3">getUserData()</span>
                     Your Personal Data
                   </h3>
                   
                   {userLoading ? (
                     <div className="text-center py-4">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-400 mx-auto"></div>
-                      <p className="mt-2 text-gray-300 text-sm">Loading your data...</p>
+                      <p className="mt-2 text-muted-foreground text-sm">Loading your data...</p>
                     </div>
                   ) : userData ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1008,8 +945,8 @@ export default function Home() {
                         <div className="text-2xl font-bold text-green-400 mb-1">
                           {formatUSDC(userData.balance)} USDC
                         </div>
-                        <p className="text-gray-300 text-sm font-medium">Your Contract Balance</p>
-                        <p className="text-gray-400 text-xs mt-1">
+                        <p className="text-muted-foreground text-sm font-medium">Your Contract Balance</p>
+                        <p className="text-muted-foreground text-xs mt-1">
                           USDC available for participation (not wallet balance)
                         </p>
                       </div>
@@ -1019,8 +956,8 @@ export default function Home() {
                         <div className="text-2xl font-bold text-blue-400 mb-1">
                           {userData.hasSufficientBalance ? 'Yes' : 'No'}
                         </div>
-                        <p className="text-gray-300 text-sm font-medium">Has Sufficient Balance</p>
-                        <p className="text-gray-400 text-xs mt-1">
+                        <p className="text-muted-foreground text-sm font-medium">Has Sufficient Balance</p>
+                        <p className="text-muted-foreground text-xs mt-1">
                           Can participate (≥ 0.01 USDC required)
                         </p>
                       </div>
@@ -1030,8 +967,8 @@ export default function Home() {
                         <div className="text-2xl font-bold text-purple-400 mb-1">
                           {userData.hasParticipatedThisWeek ? 'Yes' : 'No'}
                         </div>
-                        <p className="text-gray-300 text-sm font-medium">Participated This Week</p>
-                        <p className="text-gray-400 text-xs mt-1">
+                        <p className="text-muted-foreground text-sm font-medium">Participated This Week</p>
+                        <p className="text-muted-foreground text-xs mt-1">
                           Has already participated in current week
                         </p>
                       </div>
@@ -1041,8 +978,8 @@ export default function Home() {
                         <div className="text-2xl font-bold text-yellow-400 mb-1">
                           {userData.participationsCount}
                         </div>
-                        <p className="text-gray-300 text-sm font-medium">Total Participations</p>
-                        <p className="text-gray-400 text-xs mt-1">
+                        <p className="text-muted-foreground text-sm font-medium">Total Participations</p>
+                        <p className="text-muted-foreground text-xs mt-1">
                           Number of casts you've participated in
                         </p>
                       </div>
@@ -1052,8 +989,8 @@ export default function Home() {
                         <div className="text-2xl font-bold text-teal-400 mb-1">
                           {userData.hasSufficientBalance && !userData.hasParticipatedThisWeek ? 'Yes' : 'No'}
                         </div>
-                        <p className="text-gray-300 text-sm font-medium">Can Participate Now</p>
-                        <p className="text-gray-400 text-xs mt-1">
+                        <p className="text-muted-foreground text-sm font-medium">Can Participate Now</p>
+                        <p className="text-muted-foreground text-xs mt-1">
                           Ready to send @loveall mentions
                         </p>
                       </div>
@@ -1063,8 +1000,8 @@ export default function Home() {
                         <div className="text-2xl font-bold text-red-400 mb-1">
                           {(userData.participationsCount * 0.01).toFixed(2)} USDC
                         </div>
-                        <p className="text-gray-300 text-sm font-medium">Total Spent</p>
-                        <p className="text-gray-400 text-xs mt-1">
+                        <p className="text-muted-foreground text-sm font-medium">Total Spent</p>
+                        <p className="text-muted-foreground text-xs mt-1">
                           Total USDC spent on participations
                         </p>
                       </div>
@@ -1074,8 +1011,8 @@ export default function Home() {
                         <div className="text-2xl font-bold text-indigo-400 mb-1">
                           {userData.conversationCount}
             </div>
-                        <p className="text-gray-300 text-sm font-medium">Active Conversations</p>
-                        <p className="text-gray-400 text-xs mt-1">
+                        <p className="text-muted-foreground text-sm font-medium">Active Conversations</p>
+                        <p className="text-muted-foreground text-xs mt-1">
                           Number of different conversations this week
                         </p>
         </div>
@@ -1085,8 +1022,8 @@ export default function Home() {
                         <div className="text-2xl font-bold text-emerald-400 mb-1">
                           {userData.bestScore}/50
                         </div>
-                        <p className="text-gray-300 text-sm font-medium">Best AI Score</p>
-                        <p className="text-gray-400 text-xs mt-1">
+                        <p className="text-muted-foreground text-sm font-medium">Best AI Score</p>
+                        <p className="text-muted-foreground text-xs mt-1">
                           Highest AI evaluation score this week
                         </p>
                       </div>
@@ -1096,8 +1033,8 @@ export default function Home() {
                         <div className="text-2xl font-bold text-orange-400 mb-1">
                           {userData.remainingConversations}
                         </div>
-                        <p className="text-gray-300 text-sm font-medium">Remaining Conversations</p>
-                        <p className="text-gray-400 text-xs mt-1">
+                        <p className="text-muted-foreground text-sm font-medium">Remaining Conversations</p>
+                        <p className="text-muted-foreground text-xs mt-1">
                           Max 3 conversations per week allowed
                         </p>
                       </div>
@@ -1107,30 +1044,30 @@ export default function Home() {
                         <div className="text-2xl font-bold text-violet-400 mb-1">
                           {formatUSDC(userData.totalContributions || '0')} USDC
                         </div>
-                        <p className="text-gray-300 text-sm font-medium">Total Contributions</p>
-                        <p className="text-gray-400 text-xs mt-1">
+                        <p className="text-muted-foreground text-sm font-medium">Total Contributions</p>
+                        <p className="text-muted-foreground text-xs mt-1">
                           Direct contributions to prize pool
                         </p>
                       </div>
 
                       {/* Status Summary */}
                       <div className="bg-gradient-to-r from-gray-900/30 to-gray-800/30 rounded-xl p-4 border border-gray-500/20">
-                        <div className="text-lg font-bold text-gray-300 mb-1">
+                        <div className="text-lg font-bold text-muted-foreground mb-1">
                           {userData.hasSufficientBalance && userData.remainingConversations > 0
                             ? 'Ready to Cast' 
                             : !userData.hasSufficientBalance 
                               ? 'Need Balance' 
                               : 'No Conversations Left'}
                         </div>
-                        <p className="text-gray-300 text-sm font-medium">Current Status</p>
-                        <p className="text-gray-400 text-xs mt-1">
+                        <p className="text-muted-foreground text-sm font-medium">Current Status</p>
+                        <p className="text-muted-foreground text-xs mt-1">
                           Your participation eligibility
                         </p>
                       </div>
                     </div>
                   ) : (
                     <div className="text-center py-4">
-                      <p className="text-gray-300">Failed to load user data</p>
+                      <p className="text-muted-foreground">Failed to load user data</p>
                     </div>
                   )}
                 </div>
@@ -1139,20 +1076,20 @@ export default function Home() {
               {/* User Actions Section - Only show when connected */}
               {isConnected && address && (
                 <div>
-                  <h3 className="text-xl font-bold text-white mb-4 flex items-center">
-                    <span className="bg-orange-600 text-white px-2 py-1 rounded text-sm mr-3">Actions</span>
+                  <h3 className="text-xl font-bold text-foreground mb-4 flex items-center">
+                    <span className="bg-orange-600 text-foreground px-2 py-1 rounded text-sm mr-3">Actions</span>
                     Your Wallet Actions
                   </h3>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Top Up Section */}
-                    <div className="bg-gray-700/50 rounded-xl p-6 border border-gray-600/20">
-                      <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
-                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-xs mr-2">Top Up</span>
+                    <div className="card p-6">
+                      <h4 className="text-lg font-semibold text-card-foreground mb-4 flex items-center">
+                        <span className="bg-blue-600 text-foreground px-2 py-1 rounded text-xs mr-2">Top Up</span>
                         Add USDC to Contract
                       </h4>
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                          <label className="block text-sm font-medium text-muted-foreground mb-2">
                             Amount (USDC)
                           </label>
                           <div className="relative">
@@ -1161,15 +1098,15 @@ export default function Home() {
                               step="0.01"
                               min="0.01"
                               placeholder="0.01"
-                              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                              className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
                               value={topUpAmount}
                               onChange={(e) => setTopUpAmount(e.target.value)}
                             />
-                            <div className="absolute right-3 top-2 text-xs text-gray-400">
+                            <div className="absolute right-3 top-2 text-xs text-muted-foreground">
                               Min: 0.01 USDC
                             </div>
                           </div>
-                          <div className="mt-2 text-xs text-gray-400 space-y-1">
+                          <div className="mt-2 text-xs text-muted-foreground space-y-1">
                             <p>• <strong>Minimum:</strong> 0.01 USDC (required for participation)</p>
                             <p>• <strong>Recommended:</strong> 1.00 USDC (for multiple casts)</p>
                             <p>• <strong>Note:</strong> This adds USDC to your contract balance, not your wallet</p>
@@ -1181,8 +1118,8 @@ export default function Home() {
                           disabled={!topUpAmount || parseFloat(topUpAmount) <= 0 || isTopUpPending || isTopUpConfirming}
                           className={`w-full px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                             !topUpAmount || parseFloat(topUpAmount) <= 0 || isTopUpPending || isTopUpConfirming
-                              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                              : 'bg-blue-600 hover:bg-blue-700 text-white hover:scale-105'
+                              ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                              : 'bg-blue-600 hover:bg-blue-700 text-foreground hover:scale-105'
                           }`}
                         >
                           {isTopUpPending ? 'Confirming...' : isTopUpConfirming ? 'Processing...' : 'Top Up Contract'}
@@ -1191,14 +1128,14 @@ export default function Home() {
                     </div>
 
                     {/* Withdraw Section */}
-                    <div className="bg-gray-700/50 rounded-xl p-6 border border-gray-600/20">
-                      <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
-                        <span className="bg-red-600 text-white px-2 py-1 rounded text-xs mr-2">Withdraw</span>
+                    <div className="card p-6">
+                      <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center">
+                        <span className="bg-red-600 text-foreground px-2 py-1 rounded text-xs mr-2">Withdraw</span>
                         Withdraw from Contract
                       </h4>
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                          <label className="block text-sm font-medium text-muted-foreground mb-2">
                             Amount (USDC)
                           </label>
                           <div className="relative">
@@ -1207,15 +1144,15 @@ export default function Home() {
                               step="0.01"
                               min="0.01"
                               placeholder="0.01"
-                              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                              className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
                               value={withdrawAmount}
                               onChange={(e) => setWithdrawAmount(e.target.value)}
                             />
-                            <div className="absolute right-3 top-2 text-xs text-gray-400">
+                            <div className="absolute right-3 top-2 text-xs text-muted-foreground">
                               Available: {userData?.balance || '0.00'} USDC
                             </div>
                           </div>
-                          <div className="mt-2 text-xs text-gray-400 space-y-1">
+                          <div className="mt-2 text-xs text-muted-foreground space-y-1">
                             <p>• <strong>Available Balance:</strong> {userData?.balance || '0.00'} USDC in contract</p>
                             <p>• <strong>Minimum:</strong> 0.01 USDC (cannot withdraw less)</p>
                             <p>• <strong>Note:</strong> This withdraws USDC back to your wallet</p>
@@ -1227,8 +1164,8 @@ export default function Home() {
                           disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0 || isWithdrawPending || isWithdrawConfirming}
                           className={`w-full px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                             !withdrawAmount || parseFloat(withdrawAmount) <= 0 || isWithdrawPending || isWithdrawConfirming
-                              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                              : 'bg-red-600 hover:bg-red-700 text-white hover:scale-105'
+                              ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                              : 'bg-red-600 hover:bg-red-700 text-foreground hover:scale-105'
                           }`}
                         >
                           {isWithdrawPending ? 'Confirming...' : isWithdrawConfirming ? 'Processing...' : 'Withdraw from Contract'}
@@ -1237,18 +1174,18 @@ export default function Home() {
                     </div>
 
                     {/* Allowance Section */}
-                    <div className="bg-gray-700/50 rounded-xl p-6 border border-gray-600/20">
-                      <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
-                        <span className="bg-yellow-600 text-white px-2 py-1 rounded text-xs mr-2">Allowance</span>
+                    <div className="card p-6">
+                      <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center">
+                        <span className="bg-yellow-600 text-foreground px-2 py-1 rounded text-xs mr-2">Allowance</span>
                         USDC Contract Approval
                       </h4>
                       <div className="space-y-4">
-                        <div className="text-sm text-gray-300">
-                          <p className="mb-2">Current Allowance: <span className="text-white font-medium">{allowance || '0.00'} USDC</span></p>
+                        <div className="text-sm text-muted-foreground">
+                          <p className="mb-2">Current Allowance: <span className="text-foreground font-medium">{allowance || '0.00'} USDC</span></p>
                           <p className="mb-4">Approve the contract to spend your USDC for top-ups.</p>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                          <label className="block text-sm font-medium text-muted-foreground mb-2">
                             Approval Amount (USDC)
                           </label>
                           <div className="relative">
@@ -1257,15 +1194,15 @@ export default function Home() {
                               step="0.01"
                               min="0.01"
                               placeholder="10.00"
-                              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                              className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
                               value={approvalAmount}
                               onChange={(e) => setApprovalAmount(e.target.value)}
                             />
-                            <div className="absolute right-3 top-2 text-xs text-gray-400">
+                            <div className="absolute right-3 top-2 text-xs text-muted-foreground">
                               Current: {allowance || '0.00'} USDC
                             </div>
                           </div>
-                          <div className="mt-2 text-xs text-gray-400 space-y-1">
+                          <div className="mt-2 text-xs text-muted-foreground space-y-1">
                             <p>• <strong>Current Allowance:</strong> {allowance || '0.00'} USDC (contract can spend)</p>
                             <p>• <strong>Recommended:</strong> 10.00 USDC (for multiple top-ups)</p>
                             <p>• <strong>Purpose:</strong> Allows contract to transfer USDC from your wallet</p>
@@ -1278,8 +1215,8 @@ export default function Home() {
                           disabled={!approvalAmount || parseFloat(approvalAmount) <= 0 || isApprovePending || isApproveConfirming}
                           className={`w-full px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                             !approvalAmount || parseFloat(approvalAmount) <= 0 || isApprovePending || isApproveConfirming
-                              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                              : 'bg-yellow-600 hover:bg-yellow-700 text-white hover:scale-105'
+                              ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                              : 'bg-yellow-600 hover:bg-yellow-700 text-foreground hover:scale-105'
                           }`}
                         >
                           {isApprovePending ? 'Confirming...' : isApproveConfirming ? 'Processing...' : 'Approve USDC'}
@@ -1336,36 +1273,36 @@ export default function Home() {
                {/* Participation History Section - Only show when connected */}
                {isConnected && address && userData && userData.participations.length > 0 && (
                  <div>
-                   <h3 className="text-xl font-bold text-white mb-4 flex items-center">
-                     <span className="bg-indigo-600 text-white px-2 py-1 rounded text-sm mr-3">History</span>
+                   <h3 className="text-xl font-bold text-foreground mb-4 flex items-center">
+                     <span className="bg-indigo-600 text-foreground px-2 py-1 rounded text-sm mr-3">History</span>
                      Your Participation History
                    </h3>
-                   <div className="bg-gray-700/50 rounded-xl p-6 border border-gray-600/20">
+                   <div className="card p-6">
                      <div className="space-y-4">
                        {userData.participations.map((participation, index) => (
-                         <div key={index} className="bg-gray-800/50 rounded-lg p-4 border border-gray-600/20">
+                         <div key={index} className="bg-secondary/50 rounded-lg p-4 border border-border">
                            <div className="flex justify-between items-start mb-3">
                              <div className="flex items-center gap-3">
                                <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center">
-                                 <span className="text-white text-sm font-bold">#{index + 1}</span>
+                                 <span className="text-foreground text-sm font-bold">#{index + 1}</span>
                 </div>
                 <div>
-                                 <h4 className="text-white font-semibold">Cast Participation</h4>
-                                 <p className="text-gray-400 text-sm">Week {participation.weekNumber}</p>
+                                 <h4 className="text-foreground font-semibold">Cast Participation</h4>
+                                 <p className="text-muted-foreground text-sm">Week {participation.weekNumber}</p>
                                </div>
                              </div>
                              <div className="text-right">
                                <div className="text-lg font-bold text-indigo-400">
                                  {participation.usdcAmount} USDC
                                </div>
-                               <div className="text-xs text-gray-400 mb-2">
+                               <div className="text-xs text-muted-foreground mb-2">
                                  {participation.isEvaluated ? 'Evaluated' : 'Pending Evaluation'}
                                </div>
                                <a
                                  href={`https://farcaster.xyz/v/${participation.castHash.slice(0, 10)}`}
                                  target="_blank"
                                  rel="noopener noreferrer"
-                                 className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded-lg transition-colors"
+                                 className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-foreground text-xs rounded-lg transition-colors"
                                  title="View this cast on Farcaster"
                                >
                                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -1379,9 +1316,9 @@ export default function Home() {
               
                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                              <div>
-                               <p className="text-gray-400 mb-1">Cast Hash:</p>
+                               <p className="text-muted-foreground mb-1">Cast Hash:</p>
                                <div className="flex items-center gap-2">
-                                 <p className="text-white font-mono text-xs break-all">
+                                 <p className="text-foreground font-mono text-xs break-all">
                                    {participation.castHash}
                                  </p>
                                  <a
@@ -1402,27 +1339,27 @@ export default function Home() {
                                </p>
                              </div>
                              <div>
-                               <p className="text-gray-400 mb-1">Conversation ID:</p>
-                               <p className="text-white font-mono text-xs break-all">
+                               <p className="text-muted-foreground mb-1">Conversation ID:</p>
+                               <p className="text-foreground font-mono text-xs break-all">
                                  {participation.conversationId}
                                </p>
                              </div>
                              <div>
-                               <p className="text-gray-400 mb-1">Farcaster ID:</p>
-                               <p className="text-white font-mono text-xs">
+                               <p className="text-muted-foreground mb-1">Farcaster ID:</p>
+                               <p className="text-foreground font-mono text-xs">
                                  {participation.fid}
                                </p>
                              </div>
                              <div>
-                               <p className="text-gray-400 mb-1">Timestamp:</p>
-                               <p className="text-white">
+                               <p className="text-muted-foreground mb-1">Timestamp:</p>
+                               <p className="text-foreground">
                                  {new Date(participation.timestamp * 1000).toLocaleString()}
                                </p>
                 </div>
                              <div>
-                               <p className="text-gray-400 mb-1">AI Score:</p>
+                               <p className="text-muted-foreground mb-1">AI Score:</p>
                                <div className="flex items-center gap-2">
-                                 <span className="text-white font-semibold">
+                                 <span className="text-foreground font-semibold">
                                    {participation.isEvaluated ? `${participation.aiScore}/50` : 'Not evaluated'}
                                  </span>
                                  {participation.isEvaluated && (
@@ -1438,12 +1375,12 @@ export default function Home() {
                                </div>
                              </div>
                 <div>
-                               <p className="text-gray-400 mb-1">Status:</p>
+                               <p className="text-muted-foreground mb-1">Status:</p>
                                <div className="flex items-center gap-2">
                                  <div className={`w-2 h-2 rounded-full ${
                                    participation.isEvaluated ? 'bg-green-500' : 'bg-yellow-500'
                                  }`}></div>
-                                 <span className="text-white">
+                                 <span className="text-foreground">
                                    {participation.isEvaluated ? 'Evaluated' : 'Pending Evaluation'}
                                  </span>
                                </div>
@@ -1467,24 +1404,24 @@ export default function Home() {
                      </div>
                      
                      {/* Summary Statistics */}
-                     <div className="mt-6 p-4 bg-gray-800/30 rounded-lg border border-gray-600/20">
-                       <h4 className="text-white font-semibold mb-3">Participation Summary</h4>
+                     <div className="mt-6 p-4 bg-secondary/30 rounded-lg border border-border">
+                       <h4 className="text-foreground font-semibold mb-3">Participation Summary</h4>
                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                          <div>
-                           <p className="text-gray-400">Total Spent:</p>
-                           <p className="text-white font-semibold">
+                           <p className="text-muted-foreground">Total Spent:</p>
+                           <p className="text-foreground font-semibold">
                              {(userData.participations.reduce((sum, p) => sum + parseFloat(p.usdcAmount), 0)).toFixed(2)} USDC
                            </p>
                          </div>
                          <div>
-                           <p className="text-gray-400">Average per Cast:</p>
-                           <p className="text-white font-semibold">
+                           <p className="text-muted-foreground">Average per Cast:</p>
+                           <p className="text-foreground font-semibold">
                              {(userData.participations.reduce((sum, p) => sum + parseFloat(p.usdcAmount), 0) / userData.participations.length).toFixed(2)} USDC
                            </p>
                          </div>
                          <div>
-                           <p className="text-gray-400">Evaluated Casts:</p>
-                           <p className="text-white font-semibold">
+                           <p className="text-muted-foreground">Evaluated Casts:</p>
+                           <p className="text-foreground font-semibold">
                              {userData.participations.filter(p => p.isEvaluated).length} / {userData.participations.length}
                            </p>
                          </div>
@@ -1495,12 +1432,12 @@ export default function Home() {
                )}
 
                {/* Data Context Explanation */}
-              <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600/20">
-                <h4 className="font-semibold text-white mb-3">📋 Data Context & Explanation</h4>
+              <div className="card p-4">
+                <h4 className="font-semibold text-foreground mb-3">📋 Data Context & Explanation</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div>
                     <h5 className="font-medium text-blue-400 mb-2">getCommonData() - System Overview</h5>
-                    <ul className="text-gray-300 space-y-1">
+                    <ul className="text-muted-foreground space-y-1">
                       <li>• <strong>Total Prize Pool:</strong> All-time cumulative USDC</li>
                       <li>• <strong>Current Week Prize Pool:</strong> USDC collected this week</li>
                       <li>• <strong>Rollover Amount:</strong> 10% from previous week</li>
@@ -1516,7 +1453,7 @@ export default function Home() {
                   </div>
                   <div>
                     <h5 className="font-medium text-violet-400 mb-2">getCurrentCharacter() - AI Character</h5>
-                    <ul className="text-gray-300 space-y-1">
+                    <ul className="text-muted-foreground space-y-1">
                       <li>• <strong>Character Name:</strong> AI persona name (e.g., "Jordan Belfort")</li>
                       <li>• <strong>Task Description:</strong> What users need to accomplish</li>
                       <li>• <strong>Trait Names:</strong> Character attributes (up to 5)</li>
@@ -1529,7 +1466,7 @@ export default function Home() {
                   </div>
                   <div>
                     <h5 className="font-medium text-green-400 mb-2">getUserData() - Personal Data</h5>
-                    <ul className="text-gray-300 space-y-1">
+                    <ul className="text-muted-foreground space-y-1">
                       <li>• <strong>Contract Balance:</strong> Your USDC in contract</li>
                       <li>• <strong>Sufficient Balance:</strong> Can participate (≥cast cost)</li>
                       <li>• <strong>Participated This Week:</strong> Has any casts this week</li>
@@ -1560,16 +1497,21 @@ export default function Home() {
           /* Connect Wallet Prompt */
           <div className="text-center py-16">
             <div className="max-w-md mx-auto">
-              <div className="w-20 h-20 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                <span className="text-white text-3xl">💝</span>
+              <div className="w-auto h-20 flex items-center justify-center mx-auto mb-6">
+                <img 
+                  src="/logo.svg" 
+                  alt="Loveall" 
+                  className="h-20 w-auto"
+                  style={{ filter: 'brightness(0) invert(1)' }}
+                />
               </div>
-              <h3 className="text-2xl font-bold text-white mb-4">Connect Your Wallet</h3>
-              <p className="text-gray-300 mb-8">
+              <h3 className="text-2xl font-bold text-foreground mb-4">Connect Your Wallet</h3>
+              <p className="text-muted-foreground mb-8">
                 Connect your wallet to participate in the Loveall prize pool and manage your balance.
               </p>
               <div className="bg-gray-800/50 rounded-xl p-6 border border-purple-500/20">
-                <h4 className="text-lg font-semibold text-white mb-3">How it works:</h4>
-                <ul className="text-gray-300 text-sm space-y-2 text-left">
+                <h4 className="text-lg font-semibold text-foreground mb-3">How it works:</h4>
+                <ul className="text-muted-foreground text-sm space-y-2 text-left">
                   <li>• Connect your wallet to Base network</li>
                   <li>• Top up your contract balance with USDC</li>
                   <li>• Mention @loveall on Farcaster to participate</li>
@@ -1587,7 +1529,7 @@ export default function Home() {
       <footer className="bg-card py-6 mt-12 border-t border-border">
         <div className="container mx-auto max-w-6xl px-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-gray-400 text-sm">
+            <p className="text-muted-foreground text-sm">
               Built on Base Network • Powered by Farcaster
             </p>
             
