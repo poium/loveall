@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import AdminDashboard from './components/AdminDashboard';
+import { FlickeringGrid } from './components/FlickeringGrid';
 import CONTRACT_ABI_JSON from '../abi.json';
 
 declare global {
@@ -289,7 +290,7 @@ export default function Home() {
           rolloverAmount: "0.00",
           totalContributions: "0.00",
           totalProtocolFees: "0.00",
-          castCost: "0.01",
+          castCost: "1",
           currentWeek: 1,
           weekStartTime: Date.now(),
           weekEndTime: Date.now() + (2 * 60 * 60 * 1000),
@@ -589,34 +590,41 @@ export default function Home() {
        {/* Header */}
        <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
          <div className="container mx-auto max-w-6xl flex h-14 items-center justify-between">
-           {/* Logo */}
-           <div className="hidden md:flex">
-             <div className="h-8 w-auto flex items-center justify-center">
-               <img 
-                 src="/logo.svg" 
-                 alt="Loveall" 
-                 className="h-8 w-auto"
-                 style={{ filter: 'brightness(0) invert(1)' }}
-               />
-             </div>
-           </div>
+          {/* Logo */}
+          <div className="hidden md:flex">
+            <a href="/" className="h-8 w-auto flex items-center justify-center hover:opacity-80 transition-opacity">
+              <img 
+                src="/logo.svg" 
+                alt="InfluAI" 
+                className="h-8 w-auto"
+                style={{ filter: 'brightness(0) invert(1)' }}
+              />
+            </a>
+          </div>
            
-           {/* Centered Navigation */}
-           <nav className="flex items-center space-x-6 text-sm font-medium">
-             <a 
-               href="/" 
-               className="transition-colors hover:text-foreground/80 text-foreground"
-             >
-               Dashboard
-             </a>
-             <a 
-               href="/chat" 
-               className="transition-colors hover:text-foreground/80 text-muted-foreground flex items-center space-x-1"
-             >
-               <span>💬</span>
-               <span>Chat History</span>
-             </a>
-           </nav>
+          {/* Centered Navigation */}
+          <nav className="flex items-center space-x-6 text-sm font-medium">
+            <a 
+              href="/" 
+              className="transition-colors hover:text-foreground/80 text-foreground"
+            >
+              Dashboard
+            </a>
+            <a 
+              href="/how-it-works" 
+              className="transition-colors hover:text-foreground/80 text-muted-foreground flex items-center space-x-1"
+            >
+              <span>📖</span>
+              <span>How It Works</span>
+            </a>
+            <a 
+              href="/chat" 
+              className="transition-colors hover:text-foreground/80 text-muted-foreground flex items-center space-x-1"
+            >
+              <span>💬</span>
+              <span>Chat History</span>
+            </a>
+          </nav>
            
            {/* Connect Button */}
            <div className="flex items-center">
@@ -625,9 +633,19 @@ export default function Home() {
          </div>
        </header>
 
-       {/* Hero Section */}
-       <section className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-         <div className="container mx-auto max-w-6xl flex h-auto flex-col items-center justify-center gap-4 py-16 text-center lg:py-20">
+      {/* Hero Section */}
+      <section className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 relative overflow-hidden">
+        <FlickeringGrid
+          className="absolute inset-0"
+          squareSize={4}
+          gridGap={6}
+          flickerChance={0.02}
+          color="rgb(147, 51, 234)"
+          maxOpacity={0.4}
+        />
+        {/* Fade-out gradient overlay */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent z-20"></div>
+        <div className="container mx-auto max-w-6xl flex h-auto flex-col items-center justify-center gap-4 py-16 text-center lg:py-20 relative z-10">
            <div className="space-y-6">
              <div className="flex flex-col items-center space-y-6">
                <img 
@@ -668,7 +686,7 @@ export default function Home() {
         
         {/* System Overview */}
         <div className="card p-6">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div className="space-y-1">
               <h2 className="text-2xl font-bold text-card-foreground">📊 System Overview</h2>
               <p className="text-sm text-muted-foreground">Prize data: 1min • Character: 10min • User data: 1min</p>
@@ -676,12 +694,14 @@ export default function Home() {
             <button
               onClick={handleManualRefresh}
               disabled={refreshDisabled}
-              className={refreshDisabled ? 'btn-secondary opacity-50 cursor-not-allowed' : 'btn-primary hover-lift'}
+              className={`flex items-center whitespace-nowrap ${refreshDisabled ? 'btn-secondary opacity-50 cursor-not-allowed' : 'btn-primary hover-lift'}`}
             >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              {refreshDisabled ? `Refresh (${refreshCountdown}s)` : 'Refresh'}
+              <span className="text-sm font-medium">
+                {refreshDisabled ? `Refresh (${refreshCountdown}s)` : 'Refresh'}
+              </span>
             </button>
           </div>
           
@@ -708,18 +728,18 @@ export default function Home() {
                     </div>
                     <p className="text-card-foreground text-sm font-medium">Current Week Prize Pool</p>
                     <p className="text-muted-foreground text-xs">
-                      Accumulated from this week's participations ({formatUSDC(prizePoolData?.castCost || '0')} USDC per cast)
+                      Accumulated from this week's participations ({formatUSDC(prizePoolData?.castCost || '1')} USDC per cast)
                     </p>
                   </div>
  
                   {/* Cast Cost */}
                   <div className="card p-4 space-y-2">
                     <div className="text-2xl font-bold text-primary">
-                      {formatUSDC(prizePoolData?.castCost || '0')} USDC
+                      {formatUSDC(prizePoolData?.castCost || '1')} USDC
                     </div>
                     <p className="text-card-foreground text-sm font-medium">Cast Cost</p>
-                    <p className="text-muted-foreground text-xs">
-                      Price per @loveall mention to participate
+                        <p className="text-muted-foreground text-xs">
+                      Price per @influai mention to participate
                     </p>
                   </div>
  
@@ -906,7 +926,7 @@ export default function Home() {
                         How to Interact
                       </h5>
                       <div className="text-blue-200 text-sm space-y-2">
-                        <p>• Mention <span className="font-mono bg-blue-900/50 px-2 py-1 rounded">@loveall</span> in your Farcaster casts</p>
+                        <p>• Mention <span className="font-mono bg-blue-900/50 px-2 py-1 rounded">@influai</span> in your Farcaster casts</p>
                         <p>• Engage with the AI character's personality and complete the given task</p>
                         <p>• Your conversation will be evaluated based on the character traits shown above</p>
                         <p>• Higher scores increase your chances of winning the weekly prize pool!</p>
@@ -970,7 +990,7 @@ export default function Home() {
                         </div>
                         <p className="text-muted-foreground text-sm font-medium">Has Sufficient Balance</p>
                         <p className="text-muted-foreground text-xs mt-1">
-                          Can participate (≥ 0.01 USDC required)
+                          Can participate (≥ 1.00 USDC required)
                         </p>
                       </div>
 
@@ -1002,15 +1022,15 @@ export default function Home() {
                           {userData.hasSufficientBalance && !userData.hasParticipatedThisWeek ? 'Yes' : 'No'}
                         </div>
                         <p className="text-muted-foreground text-sm font-medium">Can Participate Now</p>
-                        <p className="text-muted-foreground text-xs mt-1">
-                          Ready to send @loveall mentions
+                          <p className="text-muted-foreground text-xs mt-1">
+                          Ready to send @influai mentions
                         </p>
                       </div>
 
                       {/* Total Spent */}
                       <div className="bg-gradient-to-r from-red-900/30 to-pink-900/30 rounded-xl p-4 border border-red-500/20">
                         <div className="text-2xl font-bold text-red-400 mb-1">
-                          {(userData.participationsCount * 0.01).toFixed(2)} USDC
+                          {(userData.participationsCount * 1).toFixed(2)} USDC
                         </div>
                         <p className="text-muted-foreground text-sm font-medium">Total Spent</p>
                         <p className="text-muted-foreground text-xs mt-1">
@@ -1108,21 +1128,21 @@ export default function Home() {
                             <input
                               type="number"
                               step="0.01"
-                              min="0.01"
-                              placeholder="0.01"
+                              min="1.00"
+                              placeholder="1.00"
                               className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
                               value={topUpAmount}
                               onChange={(e) => setTopUpAmount(e.target.value)}
                             />
                             <div className="absolute right-3 top-2 text-xs text-muted-foreground">
-                              Min: 0.01 USDC
+                              Min: 1.00 USDC
                             </div>
                           </div>
                           <div className="mt-2 text-xs text-muted-foreground space-y-1">
-                            <p>• <strong>Minimum:</strong> 0.01 USDC (required for participation)</p>
-                            <p>• <strong>Recommended:</strong> 1.00 USDC (for multiple casts)</p>
+                            <p>• <strong>Minimum:</strong> 1.00 USDC (required for participation)</p>
+                            <p>• <strong>Recommended:</strong> 5.00 USDC (for multiple casts)</p>
                             <p>• <strong>Note:</strong> This adds USDC to your contract balance, not your wallet</p>
-                            <p>• <strong>Usage:</strong> Each @loveall mention costs {formatUSDC(prizePoolData?.castCost || '0.01')} USDC from contract balance</p>
+                            <p>• <strong>Usage:</strong> Each @influai mention costs {formatUSDC(prizePoolData?.castCost || '1')} USDC from contract balance</p>
                           </div>
                         </div>
                         <button
@@ -1154,8 +1174,8 @@ export default function Home() {
                             <input
                               type="number"
                               step="0.01"
-                              min="0.01"
-                              placeholder="0.01"
+                              min="1.00"
+                              placeholder="1.00"
                               className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
                               value={withdrawAmount}
                               onChange={(e) => setWithdrawAmount(e.target.value)}
@@ -1166,7 +1186,7 @@ export default function Home() {
                           </div>
                           <div className="mt-2 text-xs text-muted-foreground space-y-1">
                             <p>• <strong>Available Balance:</strong> {userData?.balance || '0.00'} USDC in contract</p>
-                            <p>• <strong>Minimum:</strong> 0.01 USDC (cannot withdraw less)</p>
+                            <p>• <strong>Minimum:</strong> 1.00 USDC (cannot withdraw less)</p>
                             <p>• <strong>Note:</strong> This withdraws USDC back to your wallet</p>
                             <p>• <strong>Warning:</strong> Withdrawing may affect your ability to participate</p>
                           </div>
@@ -1205,7 +1225,7 @@ export default function Home() {
                               type="number"
                               step="0.01"
                               min="0.01"
-                              placeholder="10.00"
+                              placeholder="50.00"
                               className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
                               value={approvalAmount}
                               onChange={(e) => setApprovalAmount(e.target.value)}
@@ -1508,26 +1528,26 @@ export default function Home() {
         {!isConnected && (
           /* Connect Wallet Prompt */
           <div className="text-center py-16">
-            <div className="max-w-md mx-auto">
+            <div className="w-full max-w-4xl mx-auto">
               <div className="w-auto h-20 flex items-center justify-center mx-auto mb-6">
-                <img 
-                  src="/logo.svg" 
-                  alt="Loveall" 
-                  className="h-20 w-auto"
+                 <img 
+                 src="/logo.svg" 
+                 alt="InfluAI" 
+                 className="h-20 w-auto"
                   style={{ filter: 'brightness(0) invert(1)' }}
                 />
               </div>
               <h3 className="text-2xl font-bold text-foreground mb-4">Connect Your Wallet</h3>
               <p className="text-muted-foreground mb-8">
-                Connect your wallet to participate in the Loveall prize pool and manage your balance.
+                Connect your wallet to participate in the InfluAI prize pool and manage your balance.
               </p>
               <div className="bg-gray-800/50 rounded-xl p-6 border border-purple-500/20">
                 <h4 className="text-lg font-semibold text-foreground mb-3">How it works:</h4>
                 <ul className="text-muted-foreground text-sm space-y-2 text-left">
                   <li>• Connect your wallet to Base network</li>
                   <li>• Top up your contract balance with USDC</li>
-                  <li>• Mention @loveall on Farcaster to participate</li>
-                  <li>• Pay 0.01 USDC per cast</li>
+                  <li>• Mention @influai on Farcaster to participate</li>
+                  <li>• Pay 1 USDC per cast</li>
                   <li>• Weekly winners get 90% of the prize pool</li>
                 </ul>
               </div>
@@ -1542,7 +1562,7 @@ export default function Home() {
         <div className="container mx-auto max-w-6xl px-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-muted-foreground text-sm">
-              Built on Base Network • Powered by Farcaster
+              Built on Base Network • Powered by Farcaster • influai.xyz
             </p>
             
             {/* BaseXP Footer Widget */}

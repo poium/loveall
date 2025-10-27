@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
             rolloverAmount: '0.00',
             totalContributions: '0.00',
             totalProtocolFees: '0.00',
-            castCost: '0.01',
+            castCost: '1',
             currentWeek: 1,
             weekStartTime: Date.now(),
             weekEndTime: Date.now() + (2 * 60 * 60 * 1000), // 2 hours from now
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
                         rolloverAmount: '0.00',
                         totalContributions: '0.00',
                         totalProtocolFees: '0.00',
-                        castCost: '0.01',
+                        castCost: '1',
                         currentWeek: 1,
                         weekStartTime: Date.now(),
                         weekEndTime: Date.now() + (2 * 60 * 60 * 1000),

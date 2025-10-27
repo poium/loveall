@@ -31,7 +31,7 @@ contract LoveallPrizePool is Ownable, Pausable, ReentrancyGuard {
     IERC20 public immutable usdcToken;
     
     // Constants
-    uint256 public castCost = 1e4; // 0.01 USDC (1 cent) (6 decimals) - adjustable by owner
+    uint256 public castCost = 1e6; // 1 USDC (6 decimals) - adjustable by owner
     uint256 public constant WINNER_PERCENTAGE = 80; // 80% to winner
     uint256 public constant ROLLOVER_PERCENTAGE = 10; // 10% rollover
     uint256 public constant PROTOCOL_FEE_PERCENTAGE = 10; // 10% protocol fee

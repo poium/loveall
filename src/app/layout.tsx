@@ -13,8 +13,8 @@ const jost = Jost({
 });
 
 export const metadata: Metadata = {
-  title: "Loveall - The Flirty Prize Pool Bot",
-  description: "Mention @loveall on Farcaster, pay 1 cent USDC, and get a chance to win the weekly prize pool!",
+  title: "InfluAI - Convince the AI. Win the Money.",
+  description: "Mention @influai on Farcaster, pay 1 USDC, and get a chance to win the weekly prize pool!",
 };
 
 export default function RootLayout({
