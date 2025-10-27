@@ -1523,37 +1523,6 @@ export default function Home() {
             <AdminDashboard />
           </div>
         )}
-
-        {/* Connect Wallet Prompt - Only show when not connected */}
-        {!isConnected && (
-          /* Connect Wallet Prompt */
-          <div className="text-center py-16">
-            <div className="w-full max-w-4xl mx-auto">
-              <div className="w-auto h-20 flex items-center justify-center mx-auto mb-6">
-                 <img 
-                 src="/logo.svg" 
-                 alt="InfluAI" 
-                 className="h-20 w-auto"
-                  style={{ filter: 'brightness(0) invert(1)' }}
-                />
-              </div>
-              <h3 className="text-2xl font-bold text-foreground mb-4">Connect Your Wallet</h3>
-              <p className="text-muted-foreground mb-8">
-                Connect your wallet to participate in the InfluAI prize pool and manage your balance.
-              </p>
-              <div className="bg-gray-800/50 rounded-xl p-6 border border-purple-500/20">
-                <h4 className="text-lg font-semibold text-foreground mb-3">How it works:</h4>
-                <ul className="text-muted-foreground text-sm space-y-2 text-left">
-                  <li>• Connect your wallet to Base network</li>
-                  <li>• Top up your contract balance with USDC</li>
-                  <li>• Mention @influai on Farcaster to participate</li>
-                  <li>• Pay 1 USDC per cast</li>
-                  <li>• Weekly winners get 90% of the prize pool</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        )}
         </div>
       </main>
 
